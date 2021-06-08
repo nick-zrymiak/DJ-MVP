@@ -1,0 +1,6 @@
+{
+    "tables": [
+        "weather",
+        "historical_weather"
+    ]
+}

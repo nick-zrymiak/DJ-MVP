@@ -1,0 +1,61 @@
+{
+    "version": 1,
+    "request": {
+        "url": "https://api.twitter.com/1.1/search/tweets.json",
+        "method": "GET",
+        "authorization": {
+            "type": "OAuth2",
+            "grantType": "ClientCredentials",
+            "tokenServerUrl": "https://api.twitter.com/oauth2/token"
+        },
+        "params": {
+            "q": true,
+            "count": false,
+            "max_id": false
+        },
+        "search": {
+            "key": "q"
+        },
+        "pagination": {
+            "type": "seek",
+            "seekId": "id",
+            "seekKey": "max_id",
+            "limitKey": "count",
+            "maxCount": 100
+        }
+    },
+    "examples": {
+        "q": "'celebrity'"
+    },
+    "response": {
+        "ctype": "application/json",
+        "tablePath": "$.statuses[*]",
+        "schema": {
+            "created_at": {
+                "target": "$.created_at",
+                "type": "string"
+            },
+            "text": {
+                "target": "$.text",
+                "type": "string"
+            },
+            "truncated": {
+                "target": "$.truncated",
+                "type": "boolean"
+            },
+            "iso_language_code": {
+                "target": "$.metadata.iso_language_code",
+                "type": "string"
+            },
+            "hashtags": {
+                "target": "$.entities.hashtags",
+                "type": "string"
+            },
+            "id": {
+                "target": "$.id",
+                "type": "int"
+            }
+        },
+        "orient": "records"
+    }
+}

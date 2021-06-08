@@ -1,0 +1,53 @@
+{
+    "version": 1,
+    "request": {
+        "url": "https://content.guardianapis.com/search",
+        "method": "GET",
+        "authorization": {
+            "type": "QueryParam",
+            "keyParam": "api-key"
+        },
+        "params": {
+            "q": true,
+            "page": false,
+            "page-size": false,
+            "query-fields": false,
+            "tag": false
+        },
+        "search": {
+            "key": "q"
+        },
+        "pagination": {
+            "type": "page",
+            "pageKey": "page",
+            "limitKey": "page-size",
+            "maxCount": 50
+        }
+    },
+    "examples": {
+        "q": "'basketball'"
+    },
+    "response": {
+        "ctype": "application/json",
+        "tablePath": "$.response.results[*]",
+        "schema": {
+            "headline": {
+                "target": "$.webTitle",
+                "type": "string"
+            },
+            "section": {
+                "target": "$.sectionName",
+                "type": "string"
+            },
+            "url": {
+                "target": "$.webUrl",
+                "type": "string"
+            },
+            "publish_date": {
+                "target": "$.webPublicationDate",
+                "type": "string"
+            }
+        },
+        "orient": "records"
+    }
+}

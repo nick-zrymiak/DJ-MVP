@@ -1,0 +1,7 @@
+{
+    "tables": [
+        "items",
+        "shops",
+        "shipping_info"
+    ]
+}
