@@ -16,6 +16,7 @@
             "videoDuration": false,
             "videoCategoryId": false,
             "type": false,
+            "relevanceLanguage": false,
             "maxResults": false,
             "pageToken": false
         },
