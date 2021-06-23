@@ -8,6 +8,45 @@ import config
 import urllib
 import pandas as pd
 
+def get_video_ids(prev_downloaded_videos, txt_to_list):
+    common_words_file = './common_words.txt'
+    common_words = txt_to_list(common_words_file)
+    prev_queried_words_file = './prev_queried_words.txt'
+    prev_queried_words = txt_to_list(prev_queried_words_file)
+    videos = pd.DataFrame()
+    TARGET_NUM_VIDEOS = 10000
+    current_queried_words = []
+    
+    try:
+        for i, word in enumerate(common_words):
+            if len(videos) + len(prev_downloaded_videos) >= TARGET_NUM_VIDEOS: # remove_duplicates
+                break
+            
+            if not word in prev_queried_words:
+                query = generate_query(word, prev_queried_words)
+                
+                # DataPrep query function fails if size of returned DataFrame is less than _count
+                init_videos_size = len(videos)
+                num_videos = 500
+                while init_videos_size == len(videos):
+                    try:
+                        videos = videos.append(get_video_data(query, num_videos), ignore_index=True)
+                    except ValueError:
+                        num_videos -= 50
+                
+                prev_queried_words.append(word)
+                current_queried_words.append(word)
+    
+    except dataprep.connector.errors.RequestError:
+        print('API limit exceeded')
+    finally:
+        videos.to_csv('./current_videos.csv', index=False)
+        
+        for current_queried_word in current_queried_words:
+            append_to_txt('./prev_queried_words.txt', current_queried_word)
+    
+    return videos
+
 def append_to_txt(path_name, text):
     with open(path_name, 'a') as file:
         file.write('%s\n' % text)
@@ -91,43 +130,7 @@ def generate_query(word, prev_queried_words):
 if __name__ == '__main__':
     prev_videos = './prev_downloaded_videos.txt'
     prev_downloaded_videos = txt_to_list(prev_videos)
-    common_words_file = './common_words.txt'
-    common_words = txt_to_list(common_words_file)
-    prev_queried_words_file = './prev_queried_words.txt'
-    prev_queried_words = txt_to_list(prev_queried_words_file)
-    videos = pd.DataFrame()
-    TARGET_NUM_VIDEOS = 10000
-    current_queried_words = []
-    '''
-    try:
-        # get_video_ids
-        for i, word in enumerate(common_words):
-            if len(videos) + len(prev_downloaded_videos) >= TARGET_NUM_VIDEOS:
-                # remove_duplicates
-                break
-        
-            if not word in prev_queried_words:            
-                query = generate_query(word, prev_queried_words)
-                
-                # DataPrep query function fails if size of returned DataFrame is less than _count
-                init_videos_size = len(videos)
-                num_videos = 500
-                while init_videos_size == len(videos):
-                    try:
-                        videos = videos.append(get_video_data(query, num_videos), ignore_index=True)
-                    except ValueError:
-                        num_videos -= 50
-                
-                prev_queried_words.append(word)
-                current_queried_words.append(word)
-    except dataprep.connector.errors.RequestError:
-        print('API limit exceeded')
-    finally:
-        videos.to_csv('./current_videos.csv', index=False)
-        
-        for current_queried_word in current_queried_words:
-            append_to_txt('./prev_queried_words.txt', current_queried_word)
-    '''
+    videos = get_video_ids(prev_downloaded_videos, txt_to_list)
     videos = pd.read_csv('./current_videos.csv')
     
     downloaded_videos = []
