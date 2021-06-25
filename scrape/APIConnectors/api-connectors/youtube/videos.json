@@ -17,6 +17,8 @@
             "videoCategoryId": false,
             "type": false,
             "relevanceLanguage": false,
+            "publishedAfter": false,
+            "publishedBefore": false,
             "maxResults": false,
             "pageToken": false
         },

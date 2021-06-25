@@ -7,43 +7,64 @@ import pytube
 import config
 import urllib
 import pandas as pd
+import csv
+import datetime
 
-def get_video_ids(prev_downloaded_videos, txt_to_list):
-    common_words_file = './common_words.txt'
-    common_words = txt_to_list(common_words_file)
-    prev_queried_words_file = './prev_queried_words.txt'
-    prev_queried_words = txt_to_list(prev_queried_words_file)
+def csv_to_dict(file_path):
+    end_dates = {}
+    
+    with open(file_path, mode='r') as file:
+        reader = csv.reader(file)
+        end_dates = {rows[0]:rows[1] for rows in reader}
+        
+    return end_dates
+
+def get_video_ids(prev_downloaded_videos):
+    prev_queried_dates = csv_to_dict('./prev_queried_dates.csv')
+    end_dates_is_empty = not bool(prev_queried_dates)
+    cur_time = datetime.datetime.utcnow()
+    most_recent_date = cur_time
+    earliest_date = cur_time
+    date_range = 200
+    
+    if not end_dates_is_empty:
+        most_recent_date = prev_queried_dates['most recent']
+        earliest_date = prev_queried_dates['earliest']
+        most_recent_date = datetime.datetime.strptime(most_recent_date, '%y/%m/%d %H:%M:%S')
+        earliest_date = datetime.datetime.strptime(earliest_date, '%y/%m/%d %H:%M:%S')
+    
     videos = pd.DataFrame()
     TARGET_NUM_VIDEOS = 10000
-    current_queried_words = []
+    min_date = earliest_date - datetime.timedelta(days=date_range)
+    max_date = earliest_date
     
     try:
-        for i, word in enumerate(common_words):
-            if len(videos) + len(prev_downloaded_videos) >= TARGET_NUM_VIDEOS: # remove_duplicates
-                break
-            
-            if not word in prev_queried_words:
-                query = generate_query(word, prev_queried_words)
-                
-                # DataPrep query function fails if size of returned DataFrame is less than _count
-                init_videos_size = len(videos)
-                num_videos = 500
-                while init_videos_size == len(videos):
-                    try:
-                        videos = videos.append(get_video_data(query, num_videos), ignore_index=True)
-                    except ValueError:
-                        num_videos -= 50
-                
-                prev_queried_words.append(word)
-                current_queried_words.append(word)
-    
-    except dataprep.connector.errors.RequestError:
-        print('API limit exceeded')
+        while len(videos) + len(prev_downloaded_videos) < TARGET_NUM_VIDEOS:
+            # DataPrep query function fails if size of returned DataFrame is less than _count
+            init_videos_size = len(videos)
+            while init_videos_size == len(videos):
+                try:
+                    videos = videos.append(get_video_data(min_date, max_date), ignore_index=True)
+                except ValueError:
+                    delta_range = 100
+                    date_range += delta_range
+                    min_date -= datetime.timedelta(days=delta_range)       
+            earliest_date = min_date
+            min_date -= datetime.timedelta(days=date_range)
+            max_date -= datetime.timedelta(days=date_range)
+    except dataprep.connector.errors.RequestError as e:
+        print(e)
     finally:
+        print('date_range:', date_range)
         videos.to_csv('./current_videos.csv', index=False)
         
-        for current_queried_word in current_queried_words:
-            append_to_txt('./prev_queried_words.txt', current_queried_word)
+        prev_queried_dates['earliest'] = earliest_date
+        prev_queried_dates['most recent'] = most_recent_date
+        
+        with open('./prev_queried_dates.csv', 'w') as file:
+            for key in prev_queried_dates.keys():
+                datetime_obj = prev_queried_dates[key]
+                file.write("%s,%s\n"%(key, datetime_obj.strftime('%y/%m/%d %H:%M:%S')))
     
     return videos
 
@@ -97,40 +118,33 @@ def txt_to_list(file_path):
     return new_list
 
 # YouTube search returns max 500 results per query. This limit is separate from API limits.
-def get_video_data(query, num_videos=500):
+def get_video_data(min_date, max_date, num_videos=400):
     connector_path = './APIConnectors/api-connectors/'
 
     dc = connect(connector_path + 'youtube',
                  _auth={'access_token': config.api_key}, _concurrency=1)
+    
+    min_date = min_date.isoformat('T') + 'Z'
+    max_date = max_date.isoformat('T') + 'Z'
                  
     videos = asyncio.run(dc.query(
         'videos',
         type='video',
-        videoCategoryId='10',
-        q=query,
-        topicId='/m/02lkt',
+        q='edm official music video',
         part='id, snippet',
         videoDuration='short',
         videoDefinition='high',
+        publishedAfter=min_date,
+        publishedBefore=max_date,
         _count=num_videos,
         ))
 
     return videos
 
-def generate_query(word, prev_queried_words):
-    new_query = 'edm official music video AND (intitle:"official video" OR intitle:"official music video")'
-    
-    for prev_queried_word in prev_queried_words:
-        new_query += ' AND -intitle:"' + prev_queried_word + '"'
-    
-    new_query += ' AND intitle:"' + word + '"'
-    
-    return new_query
-
 if __name__ == '__main__':
     prev_videos = './prev_downloaded_videos.txt'
     prev_downloaded_videos = txt_to_list(prev_videos)
-    videos = get_video_ids(prev_downloaded_videos, txt_to_list)
+#     videos = get_video_ids(prev_downloaded_videos)
     videos = pd.read_csv('./current_videos.csv')
     
     downloaded_videos = []
