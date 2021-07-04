@@ -111,4 +111,3 @@ def get_closest_segment(target_features):
     
     name = closest_segment[1]
     return name
-    
