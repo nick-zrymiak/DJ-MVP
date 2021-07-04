@@ -14,4 +14,3 @@ if __name__ == '__main__':
     stats = flatten_features(unflattened_stats)
     closest_segment = get_closest_segment(stats)
     print(closest_segment)#d
-    

@@ -1,4 +1,3 @@
-#segment_videos
 import librosa as lr
 import subprocess
 import os
@@ -50,4 +49,3 @@ if __name__ == '__main__':
         segment_video(unsegmented_video_path, video_name, video_path, beat_times)
         append_to_txt('./segmented_videos.txt', video_name)
         os.remove(audio_path)
-        
