@@ -5,6 +5,9 @@ import psycopg2
 from os import listdir
 from os.path import isfile, join
 import config
+import math
+import pandas as pd
+import pickle
 
 def flatten_features(unflattened_stats):
     stats = []
@@ -94,7 +97,13 @@ def get_closest_segment(target_features):
                 user='postgres',
                 password=config.password)    
     cur = con.cursor()
-    cur.execute('select * from segment_features')
+    
+    model = pickle.load(open('audio_cluster.pkl', 'rb'))
+    df_features = pd.DataFrame(target_features).T
+    predicted_label = model.predict(df_features)
+    
+    fetch_cluster = 'select * from segment_features where cluster_label = ' + str(predicted_label[0])
+    cur.execute(fetch_cluster)
     segments = cur.fetchall()
     
     closest_segment = None
@@ -102,12 +111,11 @@ def get_closest_segment(target_features):
     for segment in segments:
         features = segment[0]
         name = segment [1]
+        dist = np.linalg.norm(np.array(target_features)-np.array(features))
         
-        if name != 'Alejandro46' and name != 'BarBarBar53' and name != 'Afrojack5':#d
-            dist = np.linalg.norm(np.array(target_features)-np.array(features))
-            if dist < min_dist:
-                min_dist = dist
-                closest_segment = segment
+        if dist < min_dist:
+            min_dist = dist
+            closest_segment = segment
     
     name = closest_segment[1]
     return name
