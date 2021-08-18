@@ -4,6 +4,7 @@ from audio_similarity import *
 from segment_videos import *
 from moviepy.editor import *
 import math
+import string
 
 def segment_audio_by_beats(beat_frames, hop_length=512):
     beat_sample_cutoffs = [i * hop_length for i in beat_frames]
@@ -27,31 +28,74 @@ def clean_feature_vectors(segmented_feature_vectors):
     segmented_feature_vectors = segmented_feature_vectors.fillna(segmented_feature_vectors.mean())
     return segmented_feature_vectors.values.tolist()
 
-if __name__ == '__main__':
-    video_shift_milliseconds = 0
-    video_shift_seconds = video_shift_milliseconds/1000
+
+def blacklist_overused_song(max_segments_per_song, song_counts, blacklist_query_addendum, closest_segment):
+    song_of_segment = closest_segment.rstrip(string.digits)
     
+    if song_of_segment not in song_counts.keys():
+        song_counts[song_of_segment] = 1
+    else:
+        song_counts[song_of_segment] += 1
+        
+    if song_counts[song_of_segment] > max_segments_per_song:
+        not_first_blacklist = blacklist_query_addendum != ''
+        if not_first_blacklist:
+            blacklist_query_addendum += ' and '
+        blacklist_query_addendum += 'name not like \'' + song_of_segment + '%\''
+
+def retrieve_segment_from_corpus(corpus_path, closest_segment):
+    video_segment = None
+    while video_segment is None:
+        try:
+            video_segment = VideoFileClip(corpus_path + closest_segment + '.mp4')
+        except BlockingIOError as e:
+            print(e)
+    
+    return video_segment
+
+
+def prepare_beat_frames(video_shift_seconds, audio, sample_rate, lr, hop_length):
+    video_shift_frames = math.floor(video_shift_seconds * sample_rate / hop_length)
+    beat_frames = extract_beat_frames(audio, sample_rate)
+    beat_frames = beat_frames + video_shift_frames
+    beat_frames[0] = max(0, beat_frames[0])
+    duration = lr.get_duration(audio, sample_rate)
+    final_frame = math.floor(duration * sample_rate / hop_length)
+    beat_frames = np.append(beat_frames, final_frame)
+    beat_count = []
+    varied_beat_frames = vary_segment_lengths(beat_frames, beat_count) 
+    # varied_beat_frames = varied_beat_frames[:5]
+    print(beat_count)
+    return varied_beat_frames
+
+def calc_audio_segment_duration(beat_times, video_segments_duration, start_time, i):
+    if i == 0:
+        audio_segment_duration = beat_times[i + 1] - start_time
+    else:
+        audio_segment_duration = beat_times[i + 1] - video_segments_duration
+    return audio_segment_duration
+
+def combine_video_segments_with_audio(audio_path, audio, concat_segments):
+    audio = AudioFileClip(audio_path)
+    audio = CompositeAudioClip([audio])
+    concat_segments.audio = audio
+
+def generate_music_video(video_shift_milliseconds=0, max_segments_per_song=12):
     warnings.filterwarnings('ignore')
-    audio_dir = '/Users/Nick/Desktop/misc/djmvp/audio/'
+    
+    MS_IN_SECONDS = 1000
+    video_shift_seconds = video_shift_milliseconds/MS_IN_SECONDS
+    
+    # prepare audio
     corpus_path = '/Users/Nick/Desktop/misc/prev/corpus/WholeVideoCorpusStable20151207/'
+    audio_dir = '/Users/Nick/Desktop/misc/djmvp/audio/'
     audio_name = [audio_name for audio_name in os.listdir(audio_dir) if not audio_name.startswith('.')]
     audio_name = audio_name[0]
     audio_path = audio_dir + audio_name
     audio, sample_rate = lr.load(audio_path, sr=None)
     
     hop_length = 512
-    video_shift_frames = math.floor(video_shift_seconds*sample_rate/hop_length)
-    beat_frames = extract_beat_frames(audio, sample_rate)
-    beat_frames = beat_frames + video_shift_frames
-    beat_frames[0] = max(0, beat_frames[0]) 
-    
-    duration = lr.get_duration(audio, sample_rate)
-    final_frame = math.floor(duration*sample_rate/hop_length)
-    beat_frames = np.append(beat_frames, final_frame)
-    beat_count = []
-    varied_beat_frames = vary_segment_lengths(beat_frames, beat_count) 
-#     varied_beat_frames = varied_beat_frames[:5]
-    print(beat_count)
+    varied_beat_frames = prepare_beat_frames(video_shift_seconds, audio, sample_rate, lr, hop_length)
     beat_sample_cutoffs = segment_audio_by_beats(varied_beat_frames, hop_length)
     beat_times = lr.frames_to_time(varied_beat_frames, sr=sample_rate)
     
@@ -62,32 +106,27 @@ if __name__ == '__main__':
     video_segments = []
     video_segments_duration = 0
     start_time = beat_times[0]
+    song_counts = {}
+    blacklist_query_addendum = ''
     for i, segmented_feature_vector in enumerate(segmented_feature_vectors):
-        if i == 0:
-            audio_segment_time = beat_times[i+1] - start_time
-        else:
-            audio_segment_time = beat_times[i+1] - video_segments_duration
-
-        closest_segment = get_closest_segment(segmented_feature_vector, closest_segments, audio_segment_time)
+        audio_segment_duration = calc_audio_segment_duration(beat_times, video_segments_duration, start_time, i)
+        closest_segment = get_closest_segment(segmented_feature_vector, closest_segments, audio_segment_duration, blacklist_query_addendum)
         closest_segments.append(closest_segment)
         
-        video_segment = None
-        while video_segment is None:
-            try:
-                video_segment = VideoFileClip(corpus_path+closest_segment+'.mp4')
-            except BlockingIOError as e:
-                print(e)
+        blacklist_overused_song(max_segments_per_song, song_counts, blacklist_query_addendum, closest_segment)
+        corresponding_video_segment = retrieve_segment_from_corpus(corpus_path, closest_segment)
+        scale_factor = corresponding_video_segment.duration/audio_segment_duration
+        print(closest_segment, scale_factor, corresponding_video_segment.duration, audio_segment_duration)
+        corresponding_video_segment = corresponding_video_segment.fx(vfx.speedx, scale_factor)
         
-        scale_factor = video_segment.duration/audio_segment_time
-        print(closest_segment, scale_factor, video_segment.duration, audio_segment_time)
-        video_segment = video_segment.fx(vfx.speedx, scale_factor)
-        video_segments.append(video_segment)
-        video_segments_duration += video_segment.duration
+        video_segments.append(corresponding_video_segment)
+        video_segments_duration += corresponding_video_segment.duration
         
     concat_segments = concatenate_videoclips(video_segments, method='compose')
-    audio = AudioFileClip(audio_path)
-    audio = CompositeAudioClip([audio])
-    concat_segments.audio = audio
+    combine_video_segments_with_audio(audio_path, audio, concat_segments)
     video_path = audio_dir + audio_name[:-4] + '.mp4'
     concat_segments.write_videofile(video_path, codec='libx264', audio_codec='aac', audio_fps=sample_rate, preset='ultrafast')
 #     os.remove(audio_path) 
+
+if __name__ == '__main__':
+    generate_music_video()
