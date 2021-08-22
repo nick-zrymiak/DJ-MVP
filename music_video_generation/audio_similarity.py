@@ -121,7 +121,7 @@ def get_max_duration(cur):
     max_duration = max_duration[0][0]
     return max_duration
 
-def widen_search_space(duration, cur, min_duration, max_duration, cluster_centers):
+def widen_search_space(duration, cur, min_duration, max_duration, cluster_centers, blacklist_query_addendum):
     cluster_centers[np.argmin(cluster_centers)] = float('inf')
     new_cluster_label = np.argmin(cluster_centers)
     segments = get_segments_from_database(cur, new_cluster_label, duration, min_duration, max_duration, blacklist_query_addendum)
@@ -161,7 +161,7 @@ def get_closest_segment(target_features, current_closest_segments, duration, bla
                     
         no_unused_segments_in_cluster = closest_segment is None
         if no_unused_segments_in_cluster:
-            widen_search_space(duration, cur, min_duration, max_duration, cluster_centers)
+            widen_search_space(duration, cur, min_duration, max_duration, cluster_centers, blacklist_query_addendum)
         else:
             break
     
