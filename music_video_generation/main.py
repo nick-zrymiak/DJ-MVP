@@ -3,6 +3,7 @@ import os
 from audio_similarity import *
 from segment_videos import *
 from moviepy.editor import *
+import moviepy as mp
 import math
 import string
 
@@ -28,7 +29,6 @@ def clean_feature_vectors(segmented_feature_vectors):
     segmented_feature_vectors = segmented_feature_vectors.fillna(segmented_feature_vectors.mean())
     return segmented_feature_vectors.values.tolist()
 
-
 def blacklist_overused_song(max_segments_per_song, song_counts, blacklist_query_addendum, closest_segment):
     song_of_segment = closest_segment.rstrip(string.digits)
     
@@ -53,7 +53,6 @@ def retrieve_segment_from_corpus(corpus_path, closest_segment):
     
     return video_segment
 
-
 def prepare_beat_frames(video_shift_seconds, audio, sample_rate, lr, hop_length):
     video_shift_frames = math.floor(video_shift_seconds * sample_rate / hop_length)
     beat_frames = extract_beat_frames(audio, sample_rate)
@@ -63,8 +62,7 @@ def prepare_beat_frames(video_shift_seconds, audio, sample_rate, lr, hop_length)
     final_frame = math.floor(duration * sample_rate / hop_length)
     beat_frames = np.append(beat_frames, final_frame)
     beat_count = []
-    varied_beat_frames = vary_segment_lengths(beat_frames, beat_count) 
-    # varied_beat_frames = varied_beat_frames[:5]
+    varied_beat_frames = vary_segment_lengths(beat_frames, beat_count)
     print(beat_count)
     return varied_beat_frames
 
@@ -80,14 +78,48 @@ def combine_video_segments_with_audio(audio_path, audio, concat_segments):
     audio = CompositeAudioClip([audio])
     concat_segments.audio = audio
 
-def generate_music_video(video_shift_milliseconds=0, max_segments_per_song=12):
+def get_hls_query_addendum(hue_min,
+                           hue_max,
+                           lightness_min, 
+                           lightness_max,
+                           saturation_min, 
+                           saturation_max):
+    
+    return 'hue between ' + hue_min + ' and ' + hue_max + ' and ' \
+            + 'lightness between ' + lightness_min + ' and ' + lightness_max + ' and ' \
+            + 'saturation between ' + saturation_min + ' and ' + saturation_max
+
+
+def add_fx(audio_segment_duration, closest_segment, corresponding_video_segment, fx):
+    scale_factor = corresponding_video_segment.duration / audio_segment_duration
+    print(closest_segment, scale_factor, corresponding_video_segment.duration, audio_segment_duration)
+    corresponding_video_segment = corresponding_video_segment.fx(vfx.speedx, scale_factor)
+    
+#     corresponding_video_segment = clip = mp.video.fx.all.blackwhite(corresponding_video_segment)
+#     corresponding_video_segment = clip = mp.video.fx.all.colorx(corresponding_video_segment, 2)
+        
+    return corresponding_video_segment
+
+def generate_music_video(video_shift_milliseconds=0, 
+                         max_segments_per_song=12, 
+                         black_and_white=False,
+                         colour_intensity=False,
+                         hue_min='0', 
+                         hue_max='255',
+                         lightness_min='0', 
+                         lightness_max='255',
+                         saturation_min='0', 
+                         saturation_max='255'):
+    
     warnings.filterwarnings('ignore')
     
     MS_IN_SECONDS = 1000
     video_shift_seconds = video_shift_milliseconds/MS_IN_SECONDS
     
     # prepare audio
-    corpus_path = '/Users/Nick/Desktop/misc/prev/corpus/WholeVideoCorpusStable20151207/'
+#     corpus_path = '/Users/Nick/Desktop/misc/prev/corpus/WholeVideoCorpusStable20151207/'
+    corpus_path = '/Volumes/WD_BLACK/segments/'
+#     corpus_path = '/Users/Nick/Desktop/misc/djmvp/'
     audio_dir = '/Users/Nick/Desktop/misc/djmvp/audio/'
     audio_name = [audio_name for audio_name in os.listdir(audio_dir) if not audio_name.startswith('.')]
     audio_name = audio_name[0]
@@ -96,6 +128,7 @@ def generate_music_video(video_shift_milliseconds=0, max_segments_per_song=12):
     
     hop_length = 512
     varied_beat_frames = prepare_beat_frames(video_shift_seconds, audio, sample_rate, lr, hop_length)
+#     varied_beat_frames = varied_beat_frames[:5]
     beat_sample_cutoffs = segment_audio_by_beats(varied_beat_frames, hop_length)
     beat_times = lr.frames_to_time(varied_beat_frames, sr=sample_rate)
     
@@ -108,19 +141,41 @@ def generate_music_video(video_shift_milliseconds=0, max_segments_per_song=12):
     start_time = beat_times[0]
     song_counts = {}
     blacklist_query_addendum = ''
+    hls_query_addendum = get_hls_query_addendum(hue_min, 
+                                                hue_max,
+                                                lightness_min, 
+                                                lightness_max,
+                                                saturation_min, 
+                                                saturation_max)
+    
+#     fx = [fx for fx in [black_and_white, colour_intensity]] # make dict maybe
+#     segment_fx = {}
+#     for i in range(len(segmented_feature_vectors)):
+#         segment_fx[str(i)] = 
+    
     for i, segmented_feature_vector in enumerate(segmented_feature_vectors):
         audio_segment_duration = calc_audio_segment_duration(beat_times, video_segments_duration, start_time, i)
-        closest_segment = get_closest_segment(segmented_feature_vector, closest_segments, audio_segment_duration, blacklist_query_addendum)
+        closest_segment = get_closest_segment(segmented_feature_vector, 
+                                              closest_segments, 
+                                              audio_segment_duration, 
+                                              blacklist_query_addendum,
+                                              hls_query_addendum)
+        
         closest_segments.append(closest_segment)
         
         blacklist_overused_song(max_segments_per_song, song_counts, blacklist_query_addendum, closest_segment)
         corresponding_video_segment = retrieve_segment_from_corpus(corpus_path, closest_segment)
-        scale_factor = corresponding_video_segment.duration/audio_segment_duration
-        print(closest_segment, scale_factor, corresponding_video_segment.duration, audio_segment_duration)
-        corresponding_video_segment = corresponding_video_segment.fx(vfx.speedx, scale_factor)
+#         corresponding_video_segment = add_fx(audio_segment_duration, 
+#                                              closest_segment, 
+#                                              corresponding_video_segment, 
+#                                              fx)
+        
         
         video_segments.append(corresponding_video_segment)
         video_segments_duration += corresponding_video_segment.duration
+        
+        if i == 150:
+            j = 'asdf'
         
     concat_segments = concatenate_videoclips(video_segments, method='compose')
     combine_video_segments_with_audio(audio_path, audio, concat_segments)

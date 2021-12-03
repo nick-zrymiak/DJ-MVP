@@ -11,10 +11,12 @@ def segment_video(unsegmented_video_path, video_name, video_path, beat_times):
     
     for i, end_time in enumerate(beat_times[1:]):
 #         segment_path = unsegmented_video_path + '../segments/' + video_name[:-4] + str(i) + '.mp4'
-        segment_path = '/Users/Nick/Desktop/misc/segments/' + video_name[:-4] + str(i) + '.mp4'
+
+#         segment_path = '/Users/Nick/Desktop/misc/djmvp/segments/' + video_name[:-4] + str(i) + '.mp4'
+        segment_path = '/Volumes/WD_BLACK/segments/' + video_name[:-4] + str(i) + '.mp4'
         with VideoFileClip(video_path) as video:
             clip = video.subclip(start_time, end_time)
-            clip.write_videofile(segment_path, codec='libx264', audio_codec='aac')
+            clip.write_videofile(segment_path, codec='libx264', audio_codec='aac', preset='ultrafast')
         start_time = end_time
 
 def extract_beat_frames(audio, sample_rate, hop_length=512):
@@ -71,10 +73,14 @@ def vary_segment_lengths(beat_times, beat_count=[]):
     return varied_beat_times
 
 if __name__ == '__main__':
+    unsegmented_video_path = '/Volumes/WD_BLACK/corpus/'
 #     unsegmented_video_path = '/media/nick/WD_BLACK/corpus/'
-    unsegmented_video_path = '/Users/Nick/Desktop/misc/prev/corpus/'#d
-    video_names = [video_name for video_name in os.listdir(unsegmented_video_path) if video_name.endswith('.mp4')]
-    video_names = video_names[44:]#d
+#     unsegmented_video_path = '/Users/Nick/Desktop/misc/unsegmented/'#d
+    video_names = [video_name for video_name in os.listdir(unsegmented_video_path) if video_name.endswith('.mp4') and not video_name.startswith('.')]
+    video_names = sorted(video_names, key=str.lower)
+    
+    video_names = video_names[109:]#d
+    print(video_names[0])
 #     prev_segmented_videos = txt_to_list('./segmented_videos.txt')
     prev_segmented_videos = []#d
     video_names = [video_name for video_name in video_names if video_name not in prev_segmented_videos]

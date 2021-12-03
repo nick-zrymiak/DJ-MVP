@@ -9,14 +9,16 @@ import librosa as lr
 import string
 import cv2
 
-def drop_table(cur):
-    cur.execute('select exists(select * from information_schema.tables where table_name=%s)', ('segment_features',))
+def drop_table(cur, table_name):
+    cur.execute('select exists(select * from information_schema.tables where table_name=%s)', (table_name,))
     table_exists = cur.fetchone()[0]
      
     if table_exists:
-        cur.execute('drop table segment_features')
+        drop_query = 'drop table ' + table_name
+        cur.execute(drop_query)
 
 def get_cluster_labels(feature_vectors):
+    # GET THIS TO WORK
     features = pd.DataFrame(feature_vectors)
     features = features.fillna(features.mean())
     SEGMENTS_PER_CLUSTER = 50
@@ -27,6 +29,7 @@ def get_cluster_labels(feature_vectors):
 
 def get_song_durations(songs_path):#d
     songs = [song for song in listdir(songs_path) if song.endswith('.mp4')]
+#     songs = songs[:101]#d
     durations = {}
     
     for song in songs:
@@ -62,9 +65,13 @@ def get_visual_features(segments, songs_path):
         
     return visual_features
         
-def populate_database(cur, feature_vectors, segments, cluster_labels, durations, songs_path):#d remove cluster_labels and durations param and uncomment lines below
-#     cluster_labels = get_cluster_labels(feature_vectors)
-#     durations = get_segment_durations(segments, songs_path)
+def populate_database(cur, feature_vectors, segments, songs_path, table_name, cluster_labels=None, durations=None):#d remove cluster_labels and durations param and uncomment lines below
+    if cluster_labels is None:
+        cluster_labels = get_cluster_labels(feature_vectors)
+
+    if durations is None:
+        durations = get_segment_durations(segments, songs_path)
+        
     visual_features = get_visual_features(segments, songs_path)
     cluster_labels_query = ''
     
@@ -73,12 +80,12 @@ def populate_database(cur, feature_vectors, segments, cluster_labels, durations,
         feature_vector = str(feature_vectors[i])[1:-1]
         clip_visual_features = visual_features[i]
         segment = segments[i][:-4]
-#         duration = str(durations[segment])
-        duration = str(durations[i])
+        duration = str(durations[segment])
+#         duration = str(durations[i])
         hue = str(clip_visual_features['hue'])
         lightness = str(clip_visual_features['lightness'])
         saturation = str(clip_visual_features['saturation'])
-        query = 'insert into segment_features values (\'{' + feature_vector + '}\', \'' + segment + '\', ' \
+        query = 'insert into ' + table_name + ' values (\'{' + feature_vector + '}\', \'' + segment + '\', ' \
                 + cluster_label + ', ' + duration + ', ' + hue + ', ' + lightness + ', ' + saturation + ')'
                 
         cur.execute(query)
@@ -120,7 +127,7 @@ def extract_visual_features(clip_path):
      
     return features
 
-def prepare_queries(songs_path, segment_names, cur):
+def prepare_queries(songs_path, segment_names, cur, table_name):
     feature_vectors = []
     
     for i, segment in enumerate(segment_names):
@@ -136,10 +143,10 @@ def prepare_queries(songs_path, segment_names, cur):
         
         feature_vectors.append(stats)
         
-    populate_database(cur, feature_vectors, segment_names, songs_path)
+    populate_database(cur, feature_vectors, segment_names, songs_path, table_name)
 
-def populate_visuals(cur, songs_path): #d
-    fetch_cluster = 'select * from segment_features'
+def populate_visuals(cur, songs_path, table_name): #d
+    fetch_cluster = 'select * from ' + table_name
     cur.execute(fetch_cluster)
     
     segments = cur.fetchall()
@@ -149,13 +156,17 @@ def populate_visuals(cur, songs_path): #d
     cluster_labels = segments[2]
     durations = segments[3]
     
-    populate_database(cur, feature_vectors, segment_names, cluster_labels, durations, songs_path)
+    populate_database(cur, feature_vectors, segment_names, songs_path, table_name, cluster_labels, durations)
 
 if __name__ == '__main__':
     warnings.filterwarnings('ignore')
-    songs_path = '/Users/Nick/Desktop/misc/prev/corpus/WholeVideoCorpusStable20151207/'
+    # GET FILLNA TO WORK
+#     songs_path = '/Users/Nick/Desktop/misc/prev/corpus/WholeVideoCorpusStable20151207/'
+#     songs_path = '/Volumes/WD_BLACK/segments/'
+    songs_path = '/Users/Nick/Desktop/misc/djmvp/segments/'
 
     segment_names = [segment for segment in listdir(songs_path) if segment.endswith('.mp4')]
+#     segment_names = segment_names[:101]
     
     con = psycopg2.connect(
                 host='localhost',
@@ -163,15 +174,18 @@ if __name__ == '__main__':
                 user='postgres',
                 password=config.password)    
     cur = con.cursor()
+
+#     table_name = 'segment_features'
+    table_name = get_table_name()    
+#     populate_visuals(cur, songs_path, table_name)
     
-    populate_visuals(cur, songs_path)
-    
-#     drop_table(cur)
-#     create_table = 'create table segment_features (features float[], name text, cluster_label int, duration float, hue float, lightness float, saturation float)'
+#     drop_table(cur, table_name)
+
+    create_table = 'create table ' + table_name + ' (features float[], name text, cluster_label int, duration float, hue float, lightness float, saturation float)'
 #     cur.execute(create_table)
 #     con.commit()
     
-#     prepare_queries(songs_path, segment_names, cur)
+    prepare_queries(songs_path, segment_names, cur, table_name)
         
     con.commit()
     cur.close()

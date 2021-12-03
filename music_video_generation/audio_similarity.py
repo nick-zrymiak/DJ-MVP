@@ -7,6 +7,10 @@ from os.path import isfile, join
 import config
 import pandas as pd
 import pickle
+import math
+
+def get_table_name():
+    return 'new_corpus'
 
 def flatten_features(unflattened_stats):
     stats = []
@@ -36,6 +40,7 @@ def generate_feature_stats(features):
 def extract_features(audio_path=None, audio=None, sample_rate=None):
     if audio_path != None:
         audio, sample_rate = lr.load(audio_path, sr=None) # setting sr=None preserves original sample rate
+        
     window_length = round(.023 * sample_rate) # 23ms window
     features = []
     hop_length = round(window_length / 2) #50% overlap
@@ -90,7 +95,14 @@ def extract_features(audio_path=None, audio=None, sample_rate=None):
     
     return features
 
-def get_segments_from_database(cur, cluster_label, duration, min_duration_corpus_segments, max_duration_corpus_segments, blacklist_query_addendum):
+def get_segments_from_database(cur, 
+                               cluster_label, 
+                               duration, 
+                               min_duration_corpus_segments, 
+                               max_duration_corpus_segments, 
+                               blacklist_query_addendum, 
+                               hls_query_addendum):
+    
     min_duration = .75 * duration
     max_duration = 1.25 * duration
     
@@ -102,46 +114,86 @@ def get_segments_from_database(cur, cluster_label, duration, min_duration_corpus
         max_duration = max_duration_corpus_segments
         min_duration = .75 * max_duration_corpus_segments
     
-    fetch_cluster = 'select * from segment_features where cluster_label = ' + str(cluster_label) + ' and duration between ' + str(min_duration) + ' and ' + str(max_duration) + blacklist_query_addendum
+    fetch_cluster = 'select * from ' + get_table_name() + ' where cluster_label = ' + str(cluster_label) \
+                    + blacklist_query_addendum + ' and ' + hls_query_addendum
+                    
+    # check if all clusters have been searched, in which case widen duration range maybe and
+    # retry all clusters
+                    
     cur.execute(fetch_cluster)
     segments = cur.fetchall()
+    
+#     if not segments:
+#         fetch_cluster = 'select * from ' + get_table_name()
+#                     
+#         cur.execute(fetch_cluster)
+#         segments = cur.fetchall()
+    
     return segments
 
 def get_min_duration(cur):
-    min_duration = 'select min(duration) from segment_features'
+    min_duration = 'select min(duration) from ' + get_table_name()
     cur.execute(min_duration)
     min_duration = cur.fetchall()
     min_duration = min_duration[0][0]
     return min_duration
 
 def get_max_duration(cur):
-    max_duration = 'select max(duration) from segment_features'
+    max_duration = 'select max(duration) from ' + get_table_name()
     cur.execute(max_duration)
     max_duration = cur.fetchall()
     max_duration = max_duration[0][0]
     return max_duration
 
-def widen_search_space(duration, cur, min_duration, max_duration, cluster_centers, blacklist_query_addendum):
+def widen_search_space(duration, 
+                       cur, 
+                       min_duration, 
+                       max_duration, 
+                       cluster_centers, 
+                       blacklist_query_addendum, 
+                       hls_query_addendum):
+    
     cluster_centers[np.argmin(cluster_centers)] = float('inf')
     new_cluster_label = np.argmin(cluster_centers)
-    segments = get_segments_from_database(cur, new_cluster_label, duration, min_duration, max_duration, blacklist_query_addendum)
+    print(new_cluster_label)
+    
+    if new_cluster_label == 251:
+        asdf = 'asdf'
+    segments = get_segments_from_database(cur, 
+                                          new_cluster_label, 
+                                          duration, 
+                                          min_duration, 
+                                          max_duration, 
+                                          blacklist_query_addendum,
+                                          hls_query_addendum)
 
-def get_closest_segment(target_features, current_closest_segments, duration, blacklist_query_addendum):
+def get_closest_segment(target_features, 
+                        current_closest_segments, 
+                        duration, 
+                        blacklist_query_addendum,
+                        hls_query_addendum):
+     
     con = psycopg2.connect(
                 host='localhost',
                 database='dj_mvp',
                 user='postgres',
                 password=config.password)    
     cur = con.cursor()
-    
+     
     min_duration = get_min_duration(cur)
     max_duration = get_max_duration(cur)
-    
+     
     model = pickle.load(open('audio_cluster.pkl', 'rb'))
     df_features = pd.DataFrame(target_features).T
     predicted_label = model.predict(df_features)
-    segments = get_segments_from_database(cur, predicted_label[0], duration, min_duration, max_duration, blacklist_query_addendum)
-    
+    segments = get_segments_from_database(cur, 
+                                          predicted_label[0], 
+                                          duration, 
+                                          min_duration, 
+                                          max_duration, 
+                                          blacklist_query_addendum, 
+                                          hls_query_addendum)
+     
     closest_segment = None
     min_dist = float('inf')
     exhausted_clusters = 0
@@ -151,18 +203,28 @@ def get_closest_segment(target_features, current_closest_segments, duration, bla
         for segment in segments:
             # retrieve segment with minimum distance
             features = segment[0]
+            
+            for i in range(len(features)):#d
+                if math.isnan(features[i]):#d
+                    features[i] = target_features[i]#d
+            
             name = segment[1]
             dist = np.linalg.norm(np.array(target_features) - np.array(features))
-            
+             
             if name not in current_closest_segments:
                 if dist < min_dist:
                     min_dist = dist
                     closest_segment = name
-                    
-        no_unused_segments_in_cluster = closest_segment is None
-        if no_unused_segments_in_cluster:
-            widen_search_space(duration, cur, min_duration, max_duration, cluster_centers, blacklist_query_addendum)
+                     
+        if closest_segment is None:
+            widen_search_space(duration, 
+                               cur, 
+                               min_duration, 
+                               max_duration, 
+                               cluster_centers, 
+                               blacklist_query_addendum, 
+                               hls_query_addendum)
         else:
             break
-    
+     
     return closest_segment
