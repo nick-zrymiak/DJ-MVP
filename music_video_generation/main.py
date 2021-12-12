@@ -89,14 +89,12 @@ def get_hls_query_addendum(hue_min,
             + 'lightness between ' + lightness_min + ' and ' + lightness_max + ' and ' \
             + 'saturation between ' + saturation_min + ' and ' + saturation_max
 
-
 def add_fx(audio_segment_duration, closest_segment, corresponding_video_segment, fx):
     scale_factor = corresponding_video_segment.duration / audio_segment_duration
-    print(closest_segment, scale_factor, corresponding_video_segment.duration, audio_segment_duration)
     corresponding_video_segment = corresponding_video_segment.fx(vfx.speedx, scale_factor)
     
-#     corresponding_video_segment = clip = mp.video.fx.all.blackwhite(corresponding_video_segment)
-#     corresponding_video_segment = clip = mp.video.fx.all.colorx(corresponding_video_segment, 2)
+    corresponding_video_segment = clip = mp.video.fx.all.blackwhite(corresponding_video_segment)
+    corresponding_video_segment = clip = mp.video.fx.all.colorx(corresponding_video_segment, 2)
         
     return corresponding_video_segment
 
@@ -117,9 +115,7 @@ def generate_music_video(video_shift_milliseconds=0,
     video_shift_seconds = video_shift_milliseconds/MS_IN_SECONDS
     
     # prepare audio
-#     corpus_path = '/Users/Nick/Desktop/misc/prev/corpus/WholeVideoCorpusStable20151207/'
     corpus_path = '/Volumes/WD_BLACK/segments/'
-#     corpus_path = '/Users/Nick/Desktop/misc/djmvp/'
     audio_dir = '/Users/Nick/Desktop/misc/djmvp/audio/'
     audio_name = [audio_name for audio_name in os.listdir(audio_dir) if not audio_name.startswith('.')]
     audio_name = audio_name[0]
@@ -173,9 +169,6 @@ def generate_music_video(video_shift_milliseconds=0,
         
         video_segments.append(corresponding_video_segment)
         video_segments_duration += corresponding_video_segment.duration
-        
-        if i == 150:
-            j = 'asdf'
         
     concat_segments = concatenate_videoclips(video_segments, method='compose')
     combine_video_segments_with_audio(audio_path, audio, concat_segments)

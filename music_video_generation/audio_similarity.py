@@ -123,12 +123,6 @@ def get_segments_from_database(cur,
     cur.execute(fetch_cluster)
     segments = cur.fetchall()
     
-#     if not segments:
-#         fetch_cluster = 'select * from ' + get_table_name()
-#                     
-#         cur.execute(fetch_cluster)
-#         segments = cur.fetchall()
-    
     return segments
 
 def get_min_duration(cur):
@@ -155,10 +149,7 @@ def widen_search_space(duration,
     
     cluster_centers[np.argmin(cluster_centers)] = float('inf')
     new_cluster_label = np.argmin(cluster_centers)
-    print(new_cluster_label)
-    
-    if new_cluster_label == 251:
-        asdf = 'asdf'
+
     segments = get_segments_from_database(cur, 
                                           new_cluster_label, 
                                           duration, 

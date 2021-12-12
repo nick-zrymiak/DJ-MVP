@@ -10,9 +10,6 @@ def segment_video(unsegmented_video_path, video_name, video_path, beat_times):
     start_time = beat_times[0]
     
     for i, end_time in enumerate(beat_times[1:]):
-#         segment_path = unsegmented_video_path + '../segments/' + video_name[:-4] + str(i) + '.mp4'
-
-#         segment_path = '/Users/Nick/Desktop/misc/djmvp/segments/' + video_name[:-4] + str(i) + '.mp4'
         segment_path = '/Volumes/WD_BLACK/segments/' + video_name[:-4] + str(i) + '.mp4'
         with VideoFileClip(video_path) as video:
             clip = video.subclip(start_time, end_time)
@@ -74,28 +71,20 @@ def vary_segment_lengths(beat_times, beat_count=[]):
 
 if __name__ == '__main__':
     unsegmented_video_path = '/Volumes/WD_BLACK/corpus/'
-#     unsegmented_video_path = '/media/nick/WD_BLACK/corpus/'
-#     unsegmented_video_path = '/Users/Nick/Desktop/misc/unsegmented/'#d
     video_names = [video_name for video_name in os.listdir(unsegmented_video_path) if video_name.endswith('.mp4') and not video_name.startswith('.')]
     video_names = sorted(video_names, key=str.lower)
-    
-    video_names = video_names[109:]#d
-    print(video_names[0])
-#     prev_segmented_videos = txt_to_list('./segmented_videos.txt')
-    prev_segmented_videos = []#d
+    prev_segmented_videos = txt_to_list('./segmented_videos.txt')
     video_names = [video_name for video_name in video_names if video_name not in prev_segmented_videos]
-
     beat_count = []
+    
     for video_name in video_names:
         video_path = unsegmented_video_path + video_name
-        print(video_name)
         beat_times = extract_beat_times(video_path)
         segment_beat_times = vary_segment_lengths(beat_times, beat_count)
-
         segment_video(unsegmented_video_path, video_name, video_path, segment_beat_times)
-#         append_to_txt('./segmented_videos.txt', video_name)
+        append_to_txt('./segmented_videos.txt', video_name)
         
-        for beat in [1, 2, 4, 8]:
+        for beat in [1, 2, 4]:
             print('Segments of length ' + str(beat) + ' beats: ' + str(beat_count.count(beat)))
         print('\n')
         

@@ -29,7 +29,6 @@ def get_cluster_labels(feature_vectors):
 
 def get_song_durations(songs_path):#d
     songs = [song for song in listdir(songs_path) if song.endswith('.mp4')]
-#     songs = songs[:101]#d
     durations = {}
     
     for song in songs:
@@ -65,7 +64,7 @@ def get_visual_features(segments, songs_path):
         
     return visual_features
         
-def populate_database(cur, feature_vectors, segments, songs_path, table_name, cluster_labels=None, durations=None):#d remove cluster_labels and durations param and uncomment lines below
+def populate_database(cur, feature_vectors, segments, songs_path, table_name, cluster_labels=None, durations=None):
     if cluster_labels is None:
         cluster_labels = get_cluster_labels(feature_vectors)
 
@@ -81,7 +80,6 @@ def populate_database(cur, feature_vectors, segments, songs_path, table_name, cl
         clip_visual_features = visual_features[i]
         segment = segments[i][:-4]
         duration = str(durations[segment])
-#         duration = str(durations[i])
         hue = str(clip_visual_features['hue'])
         lightness = str(clip_visual_features['lightness'])
         saturation = str(clip_visual_features['saturation'])
@@ -161,12 +159,8 @@ def populate_visuals(cur, songs_path, table_name): #d
 if __name__ == '__main__':
     warnings.filterwarnings('ignore')
     # GET FILLNA TO WORK
-#     songs_path = '/Users/Nick/Desktop/misc/prev/corpus/WholeVideoCorpusStable20151207/'
-#     songs_path = '/Volumes/WD_BLACK/segments/'
     songs_path = '/Users/Nick/Desktop/misc/djmvp/segments/'
-
     segment_names = [segment for segment in listdir(songs_path) if segment.endswith('.mp4')]
-#     segment_names = segment_names[:101]
     
     con = psycopg2.connect(
                 host='localhost',
@@ -175,10 +169,8 @@ if __name__ == '__main__':
                 password=config.password)    
     cur = con.cursor()
 
-#     table_name = 'segment_features'
     table_name = get_table_name()    
-#     populate_visuals(cur, songs_path, table_name)
-    
+#     populate_visuals(cur, songs_path, table_name)    
 #     drop_table(cur, table_name)
 
     create_table = 'create table ' + table_name + ' (features float[], name text, cluster_label int, duration float, hue float, lightness float, saturation float)'
