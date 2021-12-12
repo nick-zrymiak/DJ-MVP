@@ -42,3 +42,42 @@ export default class HomePage extends Component {
 		);
 	}
 }
+
+// function Drop() {
+// 	const [files, setFiles] = useState([])
+// 	
+// 	const {getRootProps, getInputProps} = useDropzone({
+// 		accept: "audio/*",
+// 		onDrop: (acceptedFiles) => {
+// 			setFiles (
+// 				acceptedFiles.map((file) => Object.assign(file, { 
+// 				preview: URL.createObjectURL(file)
+// 				}))
+// 			)
+// 		}
+// 	})
+// 	
+// 	const images = files.map((file) => (
+// 		<div key={file.name}>
+// 			<div>
+// 				<img src={file.preview} style={{width: "200px"}} alt="preview" />
+// 			</div>
+// 		
+// 		</div>
+// 	))
+// 	
+// 	return (
+// 		<div className="App">
+// 			<div {...getRootProps()}>
+// 				<input {...getInputProps()}/>
+// 				<p>Drop files here</p>
+// 			</div>
+// 			<div>{images}</div>
+// 		
+// 		</div>
+// 	)
+// }
+// 
+// const appDiv = document.getElementById("drop");
+// render(<Drop />, appDiv);
+
