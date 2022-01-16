@@ -3,3 +3,7 @@ __pycache__
 web/posted_videos.txt
 web/api/migrations
 scrape
+db.sqlite3
+audio_cluster.pkl
+segmented_videos.txt
+temp
