@@ -1,9 +1,0 @@
-{
-    "tables": [
-        "account",
-        "all_emails",
-        "email_count",
-        "email_verifier",
-        "individual_email"
-    ]
-}

@@ -1,9 +1,0 @@
-{
-    "tables": [
-        "hotel",
-        "air",
-        "activity",
-        "safety",
-        "interest"
-    ]
-}

@@ -1,2 +1,11 @@
 config.py
 __pycache__
+web/posted_videos.txt
+web/api/migrations
+scrape
+db.sqlite3
+audio_cluster.pkl
+segmented_videos.txt
+temp
+web/media/posts/*/
+web/media/videos/*/

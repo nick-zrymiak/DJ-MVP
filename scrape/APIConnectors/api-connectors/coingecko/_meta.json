@@ -1,9 +1,0 @@
-{
-    "tables": [
-        "coin_list",
-        "exchanges",
-        "exchange_volume_chart",
-        "markets",
-        "trend"
-    ]
-}
