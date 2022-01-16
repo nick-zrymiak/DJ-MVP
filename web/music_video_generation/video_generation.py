@@ -93,8 +93,7 @@ def add_fx(audio_segment_duration, closest_segment, corresponding_video_segment,
     scale_factor = corresponding_video_segment.duration / audio_segment_duration
     corresponding_video_segment = corresponding_video_segment.fx(vfx.speedx, scale_factor)
     
-    corresponding_video_segment = clip = mp.video.fx.all.blackwhite(corresponding_video_segment)
-    corresponding_video_segment = clip = mp.video.fx.all.colorx(corresponding_video_segment, 2)
+#     corresponding_video_segment = mp.video.fx.all.blackwhite(corresponding_video_segment)
         
     return corresponding_video_segment
 
@@ -146,14 +145,10 @@ def generate_music_video(audio_path,
                                                 lightness_min, 
                                                 lightness_max,
                                                 saturation_min, 
-                                                saturation_max)
-    
-#     fx = [fx for fx in [black_and_white, colour_intensity]] # make dict maybe
-#     segment_fx = {}
-#     for i in range(len(segmented_feature_vectors)):
-#         segment_fx[str(i)] = 
+                                                saturation_max) 
     
     for i, segmented_feature_vector in enumerate(segmented_feature_vectors):
+        print('Finding segment:', i)
         audio_segment_duration = calc_audio_segment_duration(beat_times, video_segments_duration, start_time, i)
         closest_segment = get_closest_segment(segmented_feature_vector, 
                                               closest_segments, 
@@ -165,10 +160,11 @@ def generate_music_video(audio_path,
         
         blacklist_overused_song(max_segments_per_song, song_counts, blacklist_query_addendum, closest_segment)
         corresponding_video_segment = retrieve_segment_from_corpus(corpus_path, closest_segment)
-#         corresponding_video_segment = add_fx(audio_segment_duration, 
-#                                              closest_segment, 
-#                                              corresponding_video_segment, 
-#                                              fx)
+        fx = {} #d
+        corresponding_video_segment = add_fx(audio_segment_duration, 
+                                             closest_segment, 
+                                             corresponding_video_segment, 
+                                             fx)
         
         
         video_segments.append(corresponding_video_segment)

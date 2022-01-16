@@ -7,3 +7,5 @@ db.sqlite3
 audio_cluster.pkl
 segmented_videos.txt
 temp
+web/media/posts/*/
+web/media/videos/*/

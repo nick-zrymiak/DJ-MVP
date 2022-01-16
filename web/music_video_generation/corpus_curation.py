@@ -18,7 +18,6 @@ def drop_table(cur, table_name):
         cur.execute(drop_query)
 
 def get_cluster_labels(feature_vectors):
-    # GET THIS TO WORK
     features = pd.DataFrame(feature_vectors)
     features = features.fillna(features.mean())
     SEGMENTS_PER_CLUSTER = 50

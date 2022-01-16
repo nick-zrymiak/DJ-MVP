@@ -115,10 +115,8 @@ def get_segments_from_database(cur,
         min_duration = .75 * max_duration_corpus_segments
     
     fetch_cluster = 'select * from ' + get_table_name() + ' where cluster_label = ' + str(cluster_label) \
+                    + ' and duration between ' + str(min_duration) + ' and ' + str(max_duration) \
                     + blacklist_query_addendum + ' and ' + hls_query_addendum
-                    
-    # check if all clusters have been searched, in which case possibly widen duration range and
-    # retry all clusters
                     
     cur.execute(fetch_cluster)
     segments = cur.fetchall()
@@ -195,13 +193,9 @@ def get_closest_segment(target_features,
             # retrieve segment with minimum distance
             features = segment[0]
             
-            for i in range(len(features)):#d
-                if math.isnan(features[i]):#d
-                    features[i] = target_features[i]#d
-            
             name = segment[1]
             dist = np.linalg.norm(np.array(target_features) - np.array(features))
-             
+            
             if name not in current_closest_segments:
                 if dist < min_dist:
                     min_dist = dist

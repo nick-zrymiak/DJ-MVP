@@ -5,18 +5,11 @@ import moviepy.editor as mp
 from moviepy.video.io.VideoFileClip import VideoFileClip
 import numpy as np
 import math
-from datetime import datetime
 
 def segment_video(unsegmented_video_path, video_name, video_path, beat_times, video_type):
     start_time = beat_times[0]
     
     for i, end_time in enumerate(beat_times[1:]):
-        
-        #d
-        now = datetime.now()
-        current_time = now.strftime("%H:%M:%S")
-        print("Current Time =", current_time)
-        
         segment_path = '/Volumes/WD_BLACK/' + video_type + '_segments/' + video_name[:-4] + str(i) + '.mp4'
         with VideoFileClip(video_path) as video:
             clip = video.subclip(start_time, end_time)
