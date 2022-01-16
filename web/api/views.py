@@ -1,67 +1,54 @@
 from django.shortcuts import render
 from rest_framework import generics, status
-from .serializers import VideoSerializer, CreateVideoSerializer
+from .serializers import CreateVideoSerializer
 from .models import Video
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.decorators import api_view
+from django.http import HttpResponse
+from django.core.files import File
+import os.path
+from web.settings import BASE_DIR, MEDIA_ROOT
+import time
+from music_video_generation.video_generation import *
+from music_video_generation.audio_similarity import *
 
-class VideoView(generics.CreateAPIView):
-    query_set = Video.objects.all()
-    serializer_class = VideoSerializer
-
+def is_being_written_to(filepath):
+        os.umask(0)
+        with open(os.open(filepath, os.O_CREAT | os.O_WRONLY, 0o777), 'w') as fh:
+            return False
+         
+        return True
+ 
+@api_view(['GET'])
+def DownloadFile(self):
+    posted_videos = txt_to_list('./posted_videos.txt')
+    path_to_file = posted_videos[-1]
+    f = open(path_to_file, 'rb')
+    file = File(f)
+    response = HttpResponse(file.read())
+    response['Content-Disposition'] = 'attachment';
+    
+    return response
+ 
 class CreateVideoView(APIView):
     serializer_class = CreateVideoSerializer
-    
+ 
     def post(self, request, format=None):
-        if not self.request.session.exists(self.request.session.session_key):
-            self.request.session.create()
-            
-        serializer = self.serializer_class(data=request.data)
+        serializer = CreateVideoSerializer(data=request.data)
+          
         if serializer.is_valid():
-            motion_direction = serializer.data.get('motion_direction')
-            motion_intensity = serializer.data.get('motion_intensity')
-            hue = serializer.data.get('hue')
-            saturation = serializer.data.get('saturation')
-            brightness = serializer.data.get('brightness')
-            contrast = serializer.data.get('contrast')
-            red = serializer.data.get('red')
-            green = serializer.data.get('green')
-            blue = serializer.data.get('blue')
-            video_shift = serializer.data.get('video_shift')
-            repeated_segments = serializer.data.get('repeated_segments')
-            repeated_songs = serializer.data.get('repeated_songs')
-            
-            black_and_white = serializer.data.get('black_and_white')
-            fade = serializer.data.get('fade')
-            mirror = serializer.data.get('mirror')
-            rotate = serializer.data.get('rotate')
-            scroll = serializer.data.get('scroll')
-            datamosh = serializer.data.get('datamosh')
-            reverse = serializer.data.get('reverse')
-            paintify = serializer.data.get('paintify')        
-            
-            video = Video(motion_direction=motion_direction, 
-                          motion_intensity=motion_intensity,
-                          hue=hue,
-                          saturation=saturation,
-                          brightness=brightness,
-                          contrast=contrast,
-                          red=red,
-                          green=green,
-                          blue=blue,
-                          video_shift=video_shift,
-                          repeated_segments=repeated_segments,
-                          repeated_songs=repeated_songs,
-                          black_and_white=black_and_white,
-                          fade=fade,
-                          mirror=mirror,
-                          rotate=rotate,
-                          scroll=scroll,
-                          datamosh=datamosh,
-                          reverse=reverse,
-                          paintify=paintify)
-            video.save()
-            return Response(CreateVideoSerializer(video).data, status=status.HTTP_201_CREATED)
+            serializer.save()
+ 
+            filepath = str(BASE_DIR) + serializer.data['audio']
+            while is_being_written_to(filepath):
+                time.sleep(1)
+                 
+            generate_music_video(filepath)
+            video_path = get_video_path(filepath)
+            append_to_txt('./posted_videos.txt', video_path)
         
-        return Response({'Bad Request': 'Invalid data...'}, status=status.HTTP_400_BAD_REQUEST)
-    
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        

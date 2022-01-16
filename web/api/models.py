@@ -1,10 +1,14 @@
 from django.db import models
+from django.conf import settings
 
-# Create your models here.
+def upload_to(instance, filename):
+    return 'posts/{filename}'.format(filename=filename)
+
 class Video(models.Model):
     # default
     # unique
     # null
+    audio = models.FileField(upload_to=upload_to, default='default_media/default_audio.mp3')
     motion_direction = models.IntegerField(default=90)
     motion_intensity = models.IntegerField(default=50)
     hue = models.IntegerField(default=50)
@@ -19,8 +23,8 @@ class Video(models.Model):
     repeated_songs = models.IntegerField(default=5)
     
     black_and_white = models.BooleanField(default=False)
-    fade = models.TextField(default=False)
-    mirror = models.TextField(default=False)
+    fade = models.TextField(default='None')
+    mirror = models.TextField(default='None')
     rotate = models.BooleanField(default=False)
     scroll = models.BooleanField(default=False)
     datamosh = models.BooleanField(default=False)

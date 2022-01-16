@@ -1,2 +1,4 @@
 config.py
 __pycache__
+web/posted_videos.txt
+web/api/migrations
