@@ -12,6 +12,7 @@ from web.settings import BASE_DIR, MEDIA_ROOT
 import time
 from music_video_generation.video_generation import *
 from music_video_generation.audio_similarity import *
+from music_video_generation.segment_videos import *
 
 def is_being_written_to(filepath):
         os.umask(0)

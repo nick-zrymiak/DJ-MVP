@@ -4,7 +4,6 @@ import statistics
 import psycopg2
 from os import listdir
 from os.path import isfile, join
-import music_video_generation.config as config
 import pandas as pd
 import pickle
 import math
@@ -103,25 +102,25 @@ def get_segments_from_database(cur,
                                blacklist_query_addendum, 
                                hls_query_addendum):
     
-    min_duration = .75 * duration
-    max_duration = 1.25 * duration
+    min_duration_cutoff = .75 * duration
+    max_duration_cutoff = 1.25 * duration
     
-    if min_duration < min_duration_corpus_segments:
-        min_duration = min_duration_corpus_segments
-        max_duration = 1.25 * min_duration_corpus_segments
+    if min_duration_cutoff < min_duration_corpus_segments:
+        min_duration_cutoff = min_duration_corpus_segments
+        max_duration_cutoff = 1.25 * min_duration_corpus_segments
     
-    if max_duration > max_duration_corpus_segments:
-        max_duration = max_duration_corpus_segments
-        min_duration = .75 * max_duration_corpus_segments
+    if max_duration_cutoff > max_duration_corpus_segments:
+        max_duration_cutoff = max_duration_corpus_segments
+        min_duration_cutoff = .75 * max_duration_corpus_segments
     
     fetch_cluster = 'select * from ' + get_table_name() + ' where cluster_label = ' + str(cluster_label) \
-                    + ' and duration between ' + str(min_duration) + ' and ' + str(max_duration) \
+                    + ' and duration between ' + str(min_duration_cutoff) + ' and ' + str(max_duration_cutoff) \
                     + blacklist_query_addendum + ' and ' + hls_query_addendum
                     
     cur.execute(fetch_cluster)
-    segments = cur.fetchall()
+    candidate_segments = cur.fetchall()
     
-    return segments
+    return candidate_segments
 
 def get_min_duration(cur):
     min_duration = 'select min(duration) from ' + get_table_name()
@@ -148,19 +147,30 @@ def widen_search_space(duration,
     cluster_centers[np.argmin(cluster_centers)] = float('inf')
     new_cluster_label = np.argmin(cluster_centers)
 
-    segments = get_segments_from_database(cur, 
+    candidate_segments = get_segments_from_database(cur, 
                                           new_cluster_label, 
                                           duration, 
                                           min_duration, 
                                           max_duration, 
                                           blacklist_query_addendum,
                                           hls_query_addendum)
+    
+    return candidate_segments
 
-def get_closest_segment(target_features, 
+def get_closest_segment(segment_feature_vector, 
                         current_closest_segments, 
                         duration, 
                         blacklist_query_addendum,
-                        hls_query_addendum):
+                        hls_query_addendum,
+                        running_with_ide):
+
+    model = None     
+    if running_with_ide:
+        import config
+        model = pickle.load(open('./audio_cluster.pkl', 'rb'))
+    else:
+        import music_video_generation.config as config
+        model = pickle.load(open('music_video_generation/audio_cluster.pkl', 'rb'))
      
     con = psycopg2.connect(
                 host='localhost',
@@ -168,14 +178,18 @@ def get_closest_segment(target_features,
                 user='postgres',
                 password=config.password)    
     cur = con.cursor()
+    
+    fetch_num_clusters = 'select count (distinct cluster_label) from ' + get_table_name()
+    cur.execute(fetch_num_clusters)
+    num_clusters = cur.fetchall()
+    num_clusters = num_clusters[0][0]
      
     min_duration = get_min_duration(cur)
     max_duration = get_max_duration(cur)
-     
-    model = pickle.load(open('music_video_generation/audio_cluster.pkl', 'rb'))
-    df_features = pd.DataFrame(target_features).T
-    predicted_label = model.predict(df_features)
-    segments = get_segments_from_database(cur, 
+    
+    segment_feature_vector = pd.DataFrame(segment_feature_vector).T
+    predicted_label = model.predict(segment_feature_vector)
+    candidate_segments = get_segments_from_database(cur, 
                                           predicted_label[0], 
                                           duration, 
                                           min_duration, 
@@ -186,15 +200,15 @@ def get_closest_segment(target_features,
     closest_segment = None
     min_dist = float('inf')
     exhausted_clusters = 0
-    cluster_centers = model.transform(df_features)
+    cluster_centers = model.transform(segment_feature_vector)
     cluster_centers = cluster_centers[0]
     while True:
-        for segment in segments:
-            # retrieve segment with minimum distance
-            features = segment[0]
+        for cadidate_segment in candidate_segments:
+            # retrieve cadidate_segment with minimum distance
+            features = cadidate_segment[0]
             
-            name = segment[1]
-            dist = np.linalg.norm(np.array(target_features) - np.array(features))
+            name = cadidate_segment[1]
+            dist = np.linalg.norm(np.array(segment_feature_vector) - np.array(features))
             
             if name not in current_closest_segments:
                 if dist < min_dist:
@@ -202,13 +216,18 @@ def get_closest_segment(target_features,
                     closest_segment = name
                      
         if closest_segment is None:
-            widen_search_space(duration, 
-                               cur, 
-                               min_duration, 
-                               max_duration, 
-                               cluster_centers, 
-                               blacklist_query_addendum, 
-                               hls_query_addendum)
+            exhausted_clusters += 1
+            
+            if exhausted_clusters == num_clusters:
+                print('No candidate segments in any cluster')
+            
+            candidate_segments = widen_search_space(duration, 
+                                                   cur, 
+                                                   min_duration, 
+                                                   max_duration, 
+                                                   cluster_centers, 
+                                                   blacklist_query_addendum, 
+                                                   hls_query_addendum)
         else:
             break
      

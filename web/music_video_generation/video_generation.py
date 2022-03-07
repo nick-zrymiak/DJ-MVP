@@ -1,18 +1,19 @@
 import warnings
 import os
-from .audio_similarity import *
-from .segment_videos import *
 from moviepy.editor import *
 import moviepy as mp
 import math
 import string
+import librosa as lr
+import numpy as np
+import pandas as pd
 
 def segment_audio_by_beats(beat_frames, hop_length=512):
     beat_sample_cutoffs = [i * hop_length for i in beat_frames]
     return beat_sample_cutoffs
 
-def get_segmented_feature_vectors(beat_sample_cutoffs, audio, sample_rate):
-    segmented_feature_vectors = []
+def get_segment_feature_vectors(beat_sample_cutoffs, audio, sample_rate):
+    segment_feature_vectors = []
     for i, beat_sample_cutoff in enumerate(beat_sample_cutoffs):
         if i < len(beat_sample_cutoffs) - 1:
             print('beat:', i)
@@ -20,14 +21,14 @@ def get_segmented_feature_vectors(beat_sample_cutoffs, audio, sample_rate):
             features = extract_features(audio=beat_sample, sample_rate=sample_rate)
             unflattened_stats = generate_feature_stats(features)
             stats = flatten_features(unflattened_stats)
-            segmented_feature_vectors.append(stats)
+            segment_feature_vectors.append(stats)
         
-    return segmented_feature_vectors
+    return segment_feature_vectors
 
-def clean_feature_vectors(segmented_feature_vectors):
-    segmented_feature_vectors = pd.DataFrame(segmented_feature_vectors)
-    segmented_feature_vectors = segmented_feature_vectors.fillna(segmented_feature_vectors.mean())
-    return segmented_feature_vectors.values.tolist()
+def clean_feature_vectors(segment_feature_vectors):
+    segment_feature_vectors = pd.DataFrame(segment_feature_vectors)
+    segment_feature_vectors = segment_feature_vectors.fillna(segment_feature_vectors.mean())
+    return segment_feature_vectors.values.tolist()
 
 def blacklist_overused_song(max_segments_per_song, song_counts, blacklist_query_addendum, closest_segment):
     song_of_segment = closest_segment.rstrip(string.digits)
@@ -97,7 +98,6 @@ def add_fx(audio_segment_duration, closest_segment, corresponding_video_segment,
         
     return corresponding_video_segment
 
-
 def get_video_path(audio_path):
     last_slash_i = audio_path.rfind('/')
     second_last_slash_i = audio_path.rfind('/', 0, last_slash_i)
@@ -114,7 +114,8 @@ def generate_music_video(audio_path,
                          lightness_min='0', 
                          lightness_max='255',
                          saturation_min='0', 
-                         saturation_max='255'):
+                         saturation_max='255',
+                         running_with_ide=False):
     
     warnings.filterwarnings('ignore')
     
@@ -131,8 +132,8 @@ def generate_music_video(audio_path,
     beat_sample_cutoffs = segment_audio_by_beats(varied_beat_frames, hop_length)
     beat_times = lr.frames_to_time(varied_beat_frames, sr=sample_rate)
     
-    segmented_feature_vectors = get_segmented_feature_vectors(beat_sample_cutoffs, audio, sample_rate)
-    segmented_feature_vectors = clean_feature_vectors(segmented_feature_vectors)
+    segment_feature_vectors = get_segment_feature_vectors(beat_sample_cutoffs, audio, sample_rate)
+    segment_feature_vectors = clean_feature_vectors(segment_feature_vectors)
     
     closest_segments = []
     video_segments = []
@@ -147,14 +148,15 @@ def generate_music_video(audio_path,
                                                 saturation_min, 
                                                 saturation_max) 
     
-    for i, segmented_feature_vector in enumerate(segmented_feature_vectors):
+    for i, segment_feature_vector in enumerate(segment_feature_vectors):
         print('Finding segment:', i)
         audio_segment_duration = calc_audio_segment_duration(beat_times, video_segments_duration, start_time, i)
-        closest_segment = get_closest_segment(segmented_feature_vector, 
+        closest_segment = get_closest_segment(segment_feature_vector, 
                                               closest_segments, 
                                               audio_segment_duration, 
                                               blacklist_query_addendum,
-                                              hls_query_addendum)
+                                              hls_query_addendum,
+                                              running_with_ide)
         
         closest_segments.append(closest_segment)
         
@@ -169,12 +171,18 @@ def generate_music_video(audio_path,
         
         video_segments.append(corresponding_video_segment)
         video_segments_duration += corresponding_video_segment.duration
+        corresponding_video_segment.close()
         
     concat_segments = concatenate_videoclips(video_segments, method='compose')
     combine_video_segments_with_audio(audio_path, audio, concat_segments)
     video_path = get_video_path(audio_path)
     concat_segments.write_videofile(video_path, codec='libx264', audio_codec='aac', audio_fps=sample_rate, preset='ultrafast')
-#     os.remove(audio_path) 
+#     os.remove(audio_path)
 
 if __name__ == '__main__':
-    generate_music_video()
+    from audio_similarity import flatten_features, generate_feature_stats, extract_features, get_closest_segment
+    from segment_videos import extract_beat_frames, vary_segment_lengths
+    generate_music_video(running_with_ide=True)
+else:
+    from .audio_similarity import flatten_features, generate_feature_stats, extract_features, get_closest_segment
+    from .segment_videos import extract_beat_frames, vary_segment_lengths
