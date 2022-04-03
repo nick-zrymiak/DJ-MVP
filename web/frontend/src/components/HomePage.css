@@ -5,6 +5,7 @@
 	justify-content: center;
 	align-items: center;
 	font-size: 1.2rem;
+	margin-bottom: 10px;
 }
 
 .navbar-logo {
@@ -38,4 +39,10 @@
 	background-color: #6d76f7;
 	border-radius: 4px;
 	transition: all 0.2s ease-out;
+}
+
+.title {
+	align: center;
+	font-size: 21px;
+	margin-bottom: 20px;
 }

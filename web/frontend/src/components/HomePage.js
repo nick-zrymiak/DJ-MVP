@@ -49,13 +49,13 @@ export default class HomePage extends Component {
 					</Typography>
 				</Grid>
 				<Grid item xs={12} align="center">
-					<div align='center'>
+					<div className='title'>
 						Music Video Producer
 					</div>
 				</Grid>
 				<div className = "drop">
 	                <Grid item>
-	                    <Drop/>
+                    	<Drop/>
 	                </Grid>
                 </div>
 			</Grid>

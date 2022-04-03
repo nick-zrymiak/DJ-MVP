@@ -182,7 +182,8 @@ def generate_music_video(audio_path,
 if __name__ == '__main__':
     from audio_similarity import flatten_features, generate_feature_stats, extract_features, get_closest_segment
     from segment_videos import extract_beat_frames, vary_segment_lengths
-    generate_music_video(running_with_ide=True)
+#     generate_music_video(running_with_ide=True)
+    generate_music_video(audio_path='/Users/Nick/Desktop/misc/dj/posts/NLE Choppa - Walk Em Down feat. Roddy Ricch [Official Music Video].mp3', running_with_ide=True)
 else:
     from .audio_similarity import flatten_features, generate_feature_stats, extract_features, get_closest_segment
     from .segment_videos import extract_beat_frames, vary_segment_lengths

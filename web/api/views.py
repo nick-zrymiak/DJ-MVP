@@ -37,6 +37,7 @@ class CreateVideoView(APIView):
  
     def post(self, request, format=None):
         serializer = CreateVideoSerializer(data=request.data)
+        print(request.data)
           
         if serializer.is_valid():
             serializer.save()
@@ -51,5 +52,6 @@ class CreateVideoView(APIView):
         
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
+            print(serializer.errors)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
