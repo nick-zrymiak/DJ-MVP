@@ -35,8 +35,30 @@ def DownloadFile(self):
 class CreateVideoView(APIView):
     serializer_class = CreateVideoSerializer
  
+
+    def process_request_data(self, request_data):
+        motion_direction_min, motion_direction_max = request_data['motion_direction'].split(',')
+        request_data['motion_direction_min'] = int(motion_direction_min)
+        request_data['motion_direction_max'] = int(motion_direction_max)
+        request_data.pop('motion_direction')
+        
+        motion_intensity_min, motion_intensity_max = request_data['motion_intensity'].split(',')
+        request_data['motion_intensity_min'] = int(motion_intensity_min)
+        request_data['motion_intensity_max'] = int(motion_intensity_max)
+        request_data.pop('motion_intensity')
+        
+        request_data['audio_video_alignment'] = int(request_data['audio_video_alignment'])
+        request_data['max_repeated_segments'] = int(request_data['max_repeated_segments'])
+        request_data['max_repeated_songs'] = int(request_data['max_repeated_songs']) 
+
     def post(self, request, format=None):
+        request_data = request.data
+        request_data._mutable = True
+        
+        self.process_request_data(request_data)
+
         serializer = CreateVideoSerializer(data=request.data)
+        print(request.data)
           
         if serializer.is_valid():
             serializer.save()
@@ -45,11 +67,12 @@ class CreateVideoView(APIView):
             while is_being_written_to(filepath):
                 time.sleep(1)
                  
-            generate_music_video(filepath)
+            generate_music_video(filepath, request.data)
             video_path = get_video_path(filepath)
             append_to_txt('./posted_videos.txt', video_path)
         
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
+            print(serializer.errors)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         

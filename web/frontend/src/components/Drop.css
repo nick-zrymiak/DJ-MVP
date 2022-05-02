@@ -1,0 +1,132 @@
+.drop-box {
+	background: #4896F1;
+	margin-left: 5%;
+	width: 43%;
+	height: 400px;
+	float: left;
+}
+
+.drop-holder {
+	width: 50%;
+	height: 40%;
+	margin-left: 25%;
+	margin-top: 25px;
+	margin-bottom: 20px;
+}
+
+.drop-button {
+	margin-top: 50px;
+	border-style: dashed;
+}
+
+.settings {
+	background: #F4F4F4;
+	margin-right: 5%;
+	width: 43%;
+	height: 400px;
+	float: right;
+}
+
+.file-holder {
+	background-color: #F4F4F4;
+	width: 505px;
+	height: 50px;
+	margin-left: 25px;
+	margin-bottom: 25px;
+}
+
+.file {
+	text-overflow: ellipsis;
+	overflow: hidden;
+	white-space: nowrap;
+}
+
+.generate-ten-sec-video {
+	margin-left: 50px;
+	width: 30%;
+	float: left;
+}
+
+.generate-full-video {
+	width: 30%;
+	float: right;
+	margin-right: 50px;
+}
+
+.progress-bar {
+	margin-top: 108px;
+	margin-left: 25px;
+}
+
+.segment-selection {
+	float: left;
+	margin-left: 10px;
+	margin-top: 10px;	
+	width: 45%;
+}
+
+.segment-selection-title {
+	text-decoration: underline;
+	margin-bottom: 25px;
+}
+
+.slider {
+	width: 75%;
+	margin-left: 12%;
+	margin-top: 10px;
+}
+
+.color {
+	margin-top: 5px;
+	margin-bottom: 5px;
+}
+
+.visual-effects {
+	float: right;
+	margin-right: 10px;
+	margin-top: 10px;
+	width: 45%;
+}
+
+.visual-effects-title {
+	text-decoration: underline;
+	margin-bottom: 25px;
+	
+}
+
+.black-and-white-label {
+	margin-bottom: 40px;
+}
+
+.black-and-white {
+}
+
+.fade-label {
+	margin-bottom: 40px;
+}
+
+.fade {
+}
+
+.mirror-label {
+	margin-bottom: 40px;
+}
+
+.mirror {
+}
+
+.datamosh-label {
+	margin-bottom: 40px;
+}
+
+.datamosh {
+}
+
+.paintify-label {
+	margin-bottom: 40px;
+}
+
+.paintify {
+}
+
+

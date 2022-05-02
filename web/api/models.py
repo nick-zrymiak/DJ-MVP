@@ -9,27 +9,26 @@ class Video(models.Model):
     # unique
     # null
     audio = models.FileField(upload_to=upload_to, default='default_media/default_audio.mp3')
-    motion_direction = models.IntegerField(default=90)
-    motion_intensity = models.IntegerField(default=50)
-    hue = models.IntegerField(default=50)
-    saturation = models.IntegerField(default=50)
-    brightness = models.IntegerField(default=50)
-    contrast = models.IntegerField(default=50)
-    red = models.IntegerField(default=50)
-    green = models.IntegerField(default=50)
-    blue = models.IntegerField(default=50)
-    video_shift = models.IntegerField(default=0)
-    repeated_segments = models.IntegerField(default=4)
-    repeated_songs = models.IntegerField(default=5)
+    created_at = models.DateTimeField(auto_now_add=True)
     
+    # segment selection parameters
+    motion_direction_min = models.IntegerField(default=0)
+    motion_direction_max = models.IntegerField(default=360)
+    motion_intensity_min = models.IntegerField(default=0)
+    motion_intensity_max = models.IntegerField(default=100)
+    audio_video_alignment = models.IntegerField(default=0)
+    max_repeated_segments = models.IntegerField(default=10)
+    max_repeated_songs = models.IntegerField(default=10)
+    red_average = models.FloatField(default=128)
+    red_std = models.FloatField(default=3)
+    green_average = models.FloatField(default=128)
+    green_std = models.FloatField(default=3)
+    blue_average = models.FloatField(default=128)
+    blue_std = models.FloatField(default=3)
+    
+    # visual effects parameters
     black_and_white = models.BooleanField(default=False)
     fade = models.TextField(default='None')
     mirror = models.TextField(default='None')
-    rotate = models.BooleanField(default=False)
-    scroll = models.BooleanField(default=False)
     datamosh = models.BooleanField(default=False)
-    reverse = models.BooleanField(default=False)
     paintify = models.BooleanField(default=False)
-    
-    created_at = models.DateTimeField(auto_now_add=True)
-    

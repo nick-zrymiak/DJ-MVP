@@ -35,8 +35,7 @@ def txt_to_list(file_path):
     if os.path.exists(file_path):
         with open(file_path, 'r') as file:
             for line in file:
-                currentPlace = line[:-1]  # removes linebreak
-                new_list.append(currentPlace)
+                new_list = file.readlines()
 
     return new_list
 

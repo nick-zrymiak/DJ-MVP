@@ -9,3 +9,4 @@ segmented_videos.txt
 temp
 web/media/posts/*
 web/media/videos/*
+feature_vectors.data
