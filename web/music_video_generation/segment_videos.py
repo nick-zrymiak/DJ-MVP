@@ -35,8 +35,7 @@ def txt_to_list(file_path):
     if os.path.exists(file_path):
         with open(file_path, 'r') as file:
             for line in file:
-                currentPlace = line[:-1]  # removes linebreak
-                new_list.append(currentPlace)
+                new_list = file.readlines()
 
     return new_list
 
@@ -70,7 +69,7 @@ def vary_segment_lengths(beat_times, beat_count=[]):
     return varied_beat_times
 
 if __name__ == '__main__':
-    video_type = 'medium_length_videos'
+    video_type = 'indian_videos'
     unsegmented_video_path = '/Volumes/WD_BLACK/' + video_type + '/'
     video_names = [video_name for video_name in os.listdir(unsegmented_video_path) if video_name.endswith('.mp4') and not video_name.startswith('.')]
     video_names = sorted(video_names, key=str.lower)

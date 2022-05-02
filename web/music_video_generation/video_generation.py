@@ -79,17 +79,6 @@ def combine_video_segments_with_audio(audio_path, audio, concat_segments):
     audio = CompositeAudioClip([audio])
     concat_segments.audio = audio
 
-def get_hls_query_addendum(hue_min,
-                           hue_max,
-                           lightness_min, 
-                           lightness_max,
-                           saturation_min, 
-                           saturation_max):
-    
-    return 'hue between ' + hue_min + ' and ' + hue_max + ' and ' \
-            + 'lightness between ' + lightness_min + ' and ' + lightness_max + ' and ' \
-            + 'saturation between ' + saturation_min + ' and ' + saturation_max
-
 def add_fx(audio_segment_duration, closest_segment, corresponding_video_segment, fx):
     scale_factor = corresponding_video_segment.duration / audio_segment_duration
     corresponding_video_segment = corresponding_video_segment.fx(vfx.speedx, scale_factor)
@@ -105,25 +94,19 @@ def get_video_path(audio_path):
     return video_path
 
 def generate_music_video(audio_path,
-                         video_shift_milliseconds=0, 
-                         max_segments_per_song=12, 
-                         black_and_white=False,
-                         colour_intensity=False,
-                         hue_min='0', 
-                         hue_max='255',
-                         lightness_min='0', 
-                         lightness_max='255',
-                         saturation_min='0', 
-                         saturation_max='255',
+                         video_settings,
                          running_with_ide=False):
-    
+
     warnings.filterwarnings('ignore')
+    
+    video_shift_milliseconds = video_settings['audio_video_alignment']
+    max_repeated_segments = video_settings['max_repeated_segments']
     
     MS_IN_SECONDS = 1000
     video_shift_seconds = video_shift_milliseconds/MS_IN_SECONDS
     
     # prepare audio
-    corpus_path = '/Volumes/WD_BLACK/corpus_segments/'
+    corpus_path = '/Volumes/WD_BLACK/'
     audio, sample_rate = lr.load(audio_path, sr=None)
     
     hop_length = 512
@@ -141,12 +124,6 @@ def generate_music_video(audio_path,
     start_time = beat_times[0]
     song_counts = {}
     blacklist_query_addendum = ''
-    hls_query_addendum = get_hls_query_addendum(hue_min, 
-                                                hue_max,
-                                                lightness_min, 
-                                                lightness_max,
-                                                saturation_min, 
-                                                saturation_max) 
     
     for i, segment_feature_vector in enumerate(segment_feature_vectors):
         print('Finding segment:', i)
@@ -155,12 +132,11 @@ def generate_music_video(audio_path,
                                               closest_segments, 
                                               audio_segment_duration, 
                                               blacklist_query_addendum,
-                                              hls_query_addendum,
                                               running_with_ide)
         
         closest_segments.append(closest_segment)
         
-        blacklist_overused_song(max_segments_per_song, song_counts, blacklist_query_addendum, closest_segment)
+        blacklist_overused_song(max_repeated_segments, song_counts, blacklist_query_addendum, closest_segment)
         corresponding_video_segment = retrieve_segment_from_corpus(corpus_path, closest_segment)
         fx = {} #d
         corresponding_video_segment = add_fx(audio_segment_duration, 
@@ -182,8 +158,9 @@ def generate_music_video(audio_path,
 if __name__ == '__main__':
     from audio_similarity import flatten_features, generate_feature_stats, extract_features, get_closest_segment
     from segment_videos import extract_beat_frames, vary_segment_lengths
-#     generate_music_video(running_with_ide=True)
-    generate_music_video(audio_path='/Users/Nick/Desktop/misc/dj/posts/NLE Choppa - Walk Em Down feat. Roddy Ricch [Official Music Video].mp3', running_with_ide=True)
+    
+    video_settings = {'audio_video_alignment': 0, 'max_repeated_segments': 10}
+    generate_music_video(video_settings=video_settings, running_with_ide=True)
 else:
     from .audio_similarity import flatten_features, generate_feature_stats, extract_features, get_closest_segment
     from .segment_videos import extract_beat_frames, vary_segment_lengths

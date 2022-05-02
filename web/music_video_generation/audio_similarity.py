@@ -9,7 +9,7 @@ import pickle
 import math
 
 def get_table_name():
-    return 'new_corpus'
+    return 'full_corpus'
 
 def flatten_features(unflattened_stats):
     stats = []
@@ -18,7 +18,7 @@ def flatten_features(unflattened_stats):
         for window in feature:
             for stat in window:
                 stats.append(stat)
-                
+    
     return stats
 
 def generate_feature_stats(features):
@@ -27,7 +27,7 @@ def generate_feature_stats(features):
     for feature in features:
         feature_stats = []
         for i, window in enumerate(feature):
-            window = (window - min(window)) / (max(window) - min(window))
+            window = (window - min(window)) / (max(window) - min(window)) # normalize data
             mean = sum(window) / len(window)
             std = np.std(window)
             feature_stats.append([mean, std])
@@ -99,8 +99,7 @@ def get_segments_from_database(cur,
                                duration, 
                                min_duration_corpus_segments, 
                                max_duration_corpus_segments, 
-                               blacklist_query_addendum, 
-                               hls_query_addendum):
+                               blacklist_query_addendum):
     
     min_duration_cutoff = .75 * duration
     max_duration_cutoff = 1.25 * duration
@@ -115,7 +114,7 @@ def get_segments_from_database(cur,
     
     fetch_cluster = 'select * from ' + get_table_name() + ' where cluster_label = ' + str(cluster_label) \
                     + ' and duration between ' + str(min_duration_cutoff) + ' and ' + str(max_duration_cutoff) \
-                    + blacklist_query_addendum + ' and ' + hls_query_addendum
+                    + blacklist_query_addendum
                     
     cur.execute(fetch_cluster)
     candidate_segments = cur.fetchall()
@@ -141,8 +140,7 @@ def widen_search_space(duration,
                        min_duration, 
                        max_duration, 
                        cluster_centers, 
-                       blacklist_query_addendum, 
-                       hls_query_addendum):
+                       blacklist_query_addendum):
     
     cluster_centers[np.argmin(cluster_centers)] = float('inf')
     new_cluster_label = np.argmin(cluster_centers)
@@ -152,8 +150,7 @@ def widen_search_space(duration,
                                           duration, 
                                           min_duration, 
                                           max_duration, 
-                                          blacklist_query_addendum,
-                                          hls_query_addendum)
+                                          blacklist_query_addendum)
     
     return candidate_segments
 
@@ -161,7 +158,6 @@ def get_closest_segment(segment_feature_vector,
                         current_closest_segments, 
                         duration, 
                         blacklist_query_addendum,
-                        hls_query_addendum,
                         running_with_ide):
 
     model = None     
@@ -194,8 +190,7 @@ def get_closest_segment(segment_feature_vector,
                                           duration, 
                                           min_duration, 
                                           max_duration, 
-                                          blacklist_query_addendum, 
-                                          hls_query_addendum)
+                                          blacklist_query_addendum)
      
     closest_segment = None
     min_dist = float('inf')
@@ -226,8 +221,7 @@ def get_closest_segment(segment_feature_vector,
                                                    min_duration, 
                                                    max_duration, 
                                                    cluster_centers, 
-                                                   blacklist_query_addendum, 
-                                                   hls_query_addendum)
+                                                   blacklist_query_addendum)
         else:
             break
      

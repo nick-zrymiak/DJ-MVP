@@ -54,7 +54,7 @@ function motionIntensityValueText(motionIntensityValue) {
 export default function Drop() {
 	const [motionDirectionValue, setMotionDirectionValue] = React.useState([0, 360]);
 	const [motionIntensityValue, setMotionIntensityValue] = React.useState([0, 100]);
-	const [alignmentValue, setAlignmentValue] = React.useState(0);
+	const [audioVideoAlignmentValue, setAudioVideoAlignmentValue] = React.useState(0);
 	const [color, setColor] = React.useState('#fff')
 
 	const handleSubmit = (e) => {
@@ -195,10 +195,10 @@ export default function Drop() {
 				<h4>Audio/video alignment (ms)</h4>
 				<div className='slider'>
 					<Slider
-						id='alignment'
-						name='alignment'
+						id='audio_video_alignment'
+						name='audio_video_alignment'
 						valueLabelDisplay="auto"
-						defaultValue={alignmentValue}
+						defaultValue={audioVideoAlignmentValue}
 						min={-10}
 						max={10}
 					/>
