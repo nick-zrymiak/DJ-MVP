@@ -128,7 +128,7 @@ if __name__ == '__main__':
     songs_path = '/Volumes/WD_BLACK/'
 #     segment_names = get_segment_names(songs_path)
     
-    with open('/Users/Nick/Desktop/misc/segment_samples.data', 'rb') as f:#d
+    with open('../../../../../Desktop/misc/segment_samples.data', 'rb') as f:#d
         segment_names = pickle.load(f)
     
     con = psycopg2.connect(

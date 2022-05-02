@@ -69,7 +69,7 @@ def vary_segment_lengths(beat_times, beat_count=[]):
     return varied_beat_times
 
 if __name__ == '__main__':
-    video_type = 'indian_videos'
+    video_type = 'medium_length_videos'
     unsegmented_video_path = '/Volumes/WD_BLACK/' + video_type + '/'
     video_names = [video_name for video_name in os.listdir(unsegmented_video_path) if video_name.endswith('.mp4') and not video_name.startswith('.')]
     video_names = sorted(video_names, key=str.lower)
