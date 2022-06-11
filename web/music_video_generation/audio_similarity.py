@@ -11,6 +11,9 @@ import math
 def get_table_name():
     return 'full_corpus'
 
+def get_n_components():
+    return [100]
+
 def flatten_features(unflattened_stats):
     stats = []
     
@@ -24,12 +27,15 @@ def flatten_features(unflattened_stats):
 def generate_feature_stats(features):
     unflattened_stats = []
     
-    for feature in features:
+    for j, feature in enumerate(features):
+        if feature.ndim < 2:
+            feature = np.reshape(feature, (1, -1))
+            features[j] = feature
         feature_stats = []
-        for i, window in enumerate(feature):
-            window = (window - min(window)) / (max(window) - min(window)) # normalize data
-            mean = sum(window) / len(window)
-            std = np.std(window)
+        for i, feature_group in enumerate(feature):
+            feature_group = (feature_group - min(feature_group)) / (max(feature_group) - min(feature_group)) # normalize data
+            mean = sum(feature_group) / len(feature_group)
+            std = np.std(feature_group)
             feature_stats.append([mean, std])
         
         unflattened_stats.append(feature_stats)
@@ -42,55 +48,59 @@ def extract_features(audio_path=None, audio=None, sample_rate=None):
         
     window_length = round(.023 * sample_rate) # 23ms window
     features = []
-    hop_length = round(window_length / 2) #50% overlap
-    
-    chroma_cens = lr.feature.chroma_cens(audio, 
-                                         sample_rate, 
-                                         n_chroma=12, 
-                                         smoothing_window='hann')
-    
+    hop_length = round(window_length / 2) # 50% overlap
+    window = 'hann'
+
     melspectrogram = lr.feature.melspectrogram(audio,
                                                sample_rate,
                                                n_fft=window_length,
-                                               window='hann',
+                                               window=window,
                                                hop_length=hop_length)
-    
-    mfcc = lr.feature.mfcc(audio, 
-                           sample_rate, 
-                           n_mfcc=20, 
-                           n_fft=window_length, 
-                           window='hann', 
+
+    mfcc = lr.feature.mfcc(audio,
+                           sample_rate,
+                           n_mfcc=12,
+                           n_fft=window_length,
+                           window=window,
                            hop_length=hop_length)
-    
+
     spectral_contrast = lr.feature.spectral_contrast(audio,
                                                      sample_rate,
                                                      n_fft=window_length,
                                                      n_bands=6,
-                                                     window='hann',
+                                                     window=window,
                                                      hop_length=hop_length)
-    
+
     spectral_flatness = lr.feature.spectral_flatness(audio,
                                                      n_fft=window_length,
-                                                     window='hann',
+                                                     window=window,
                                                      hop_length=hop_length)
-    
-    spectral_rolloff = lr.feature.spectral_rolloff(audio, 
+
+    spectral_rolloff = lr.feature.spectral_rolloff(audio,
                                                    sample_rate,
-                                                   n_fft=window_length, 
-                                                   window='hann', 
+                                                   n_fft=window_length,
+                                                   window=window,
                                                    hop_length=hop_length)
-    
+
     zero_crossing_rate = lr.feature.zero_crossing_rate(audio,
                                                        window_length,
                                                        hop_length=hop_length)
 
-    features.extend([chroma_cens, 
-                     melspectrogram, 
-                     mfcc, 
-                     spectral_contrast, 
-                     spectral_flatness, 
-                     spectral_rolloff, 
-                     zero_crossing_rate])
+    onset_strength = lr.onset.onset_strength(audio,
+                                             sample_rate,
+                                             **{'hop_length': hop_length,
+                                                'n_fft': window_length,
+                                                'window': window})
+
+    features.extend([
+        melspectrogram,
+        mfcc,
+        spectral_contrast,
+        spectral_flatness,
+        spectral_rolloff,
+        zero_crossing_rate,
+        onset_strength
+    ])
     
     return features
 
@@ -163,10 +173,10 @@ def get_closest_segment(segment_feature_vector,
     model = None     
     if running_with_ide:
         import config
-        model = pickle.load(open('./audio_cluster.pkl', 'rb'))
+        model = pickle.load(open('audio_cluster_100.pkl', 'rb'))
     else:
         import music_video_generation.config as config
-        model = pickle.load(open('music_video_generation/audio_cluster.pkl', 'rb'))
+        model = pickle.load(open('music_video_generation/audio_cluster_100.pkl', 'rb'))
      
     con = psycopg2.connect(
                 host='localhost',
@@ -203,7 +213,8 @@ def get_closest_segment(segment_feature_vector,
             features = cadidate_segment[0]
             
             name = cadidate_segment[1]
-            dist = np.linalg.norm(np.array(segment_feature_vector) - np.array(features))
+            segment_feature_vector_np = np.array(segment_feature_vector)
+            dist = np.linalg.norm(segment_feature_vector_np - np.array(features))
             
             if name not in current_closest_segments:
                 if dist < min_dist:
