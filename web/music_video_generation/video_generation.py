@@ -7,6 +7,8 @@ import string
 import librosa as lr
 import numpy as np
 import pandas as pd
+import time
+import pickle
 
 def segment_audio_by_beats(beat_frames, hop_length=512):
     beat_sample_cutoffs = [i * hop_length for i in beat_frames]
@@ -28,7 +30,12 @@ def get_segment_feature_vectors(beat_sample_cutoffs, audio, sample_rate):
 def clean_feature_vectors(segment_feature_vectors):
     segment_feature_vectors = pd.DataFrame(segment_feature_vectors)
     segment_feature_vectors = segment_feature_vectors.fillna(segment_feature_vectors.mean())
-    return segment_feature_vectors.values.tolist()
+
+    pca_name = './pca_model_100.joblib'
+    pca = pickle.load(open(pca_name, 'rb'))
+    segment_feature_vectors = pca.transform(segment_feature_vectors)
+
+    return segment_feature_vectors.tolist()
 
 def blacklist_overused_song(max_segments_per_song, song_counts, blacklist_query_addendum, closest_segment):
     song_of_segment = closest_segment.rstrip(string.digits)
@@ -102,14 +109,15 @@ def generate_music_video(audio_path,
     video_shift_milliseconds = video_settings['audio_video_alignment']
     max_repeated_segments = video_settings['max_repeated_segments']
     
-    MS_IN_SECONDS = 1000
-    video_shift_seconds = video_shift_milliseconds/MS_IN_SECONDS
+    NUM_MS_IN_SECONDS = 1000
+    video_shift_seconds = video_shift_milliseconds/NUM_MS_IN_SECONDS
     
     # prepare audio
     corpus_path = '/Volumes/WD_BLACK/'
     audio, sample_rate = lr.load(audio_path, sr=None)
-    
-    hop_length = 512
+
+    window_length = round(.023 * sample_rate)  # 23ms window
+    hop_length = round(window_length / 2)  # 50% overlap
     varied_beat_frames = prepare_beat_frames(video_shift_seconds, audio, sample_rate, lr, hop_length)
 #     varied_beat_frames = varied_beat_frames[:5]
     beat_sample_cutoffs = segment_audio_by_beats(varied_beat_frames, hop_length)
@@ -117,6 +125,7 @@ def generate_music_video(audio_path,
     
     segment_feature_vectors = get_segment_feature_vectors(beat_sample_cutoffs, audio, sample_rate)
     segment_feature_vectors = clean_feature_vectors(segment_feature_vectors)
+    start = time.time()
     
     closest_segments = []
     video_segments = []
@@ -138,7 +147,7 @@ def generate_music_video(audio_path,
         
         blacklist_overused_song(max_repeated_segments, song_counts, blacklist_query_addendum, closest_segment)
         corresponding_video_segment = retrieve_segment_from_corpus(corpus_path, closest_segment)
-        fx = {} #d
+        fx = {} #d once fx is initialized elsewhere
         corresponding_video_segment = add_fx(audio_segment_duration, 
                                              closest_segment, 
                                              corresponding_video_segment, 
@@ -148,19 +157,26 @@ def generate_music_video(audio_path,
         video_segments.append(corresponding_video_segment)
         video_segments_duration += corresponding_video_segment.duration
         corresponding_video_segment.close()
-        
+    segment_selection_time = time.time()
+    print('segment selection time:', segment_selection_time - start)
+
     concat_segments = concatenate_videoclips(video_segments, method='compose')
     combine_video_segments_with_audio(audio_path, audio, concat_segments)
     video_path = get_video_path(audio_path)
     concat_segments.write_videofile(video_path, codec='libx264', audio_codec='aac', audio_fps=sample_rate, preset='ultrafast')
+
 #     os.remove(audio_path)
 
 if __name__ == '__main__':
     from audio_similarity import flatten_features, generate_feature_stats, extract_features, get_closest_segment
     from segment_videos import extract_beat_frames, vary_segment_lengths
-    
+
+    start = time.time()
     video_settings = {'audio_video_alignment': 0, 'max_repeated_segments': 10}
-    generate_music_video(video_settings=video_settings, running_with_ide=True)
+    generate_music_video(audio_path='/Users/Nick/Desktop/misc/dj/posts/test.mp3', video_settings=video_settings,
+                         running_with_ide=True)
+    end = time.time()
+    print('video generation time:', end - start)
 else:
     from .audio_similarity import flatten_features, generate_feature_stats, extract_features, get_closest_segment
     from .segment_videos import extract_beat_frames, vary_segment_lengths

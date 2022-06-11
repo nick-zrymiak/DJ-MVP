@@ -42,7 +42,6 @@ def txt_to_list(file_path):
 def vary_segment_lengths(beat_times, beat_count=[]):
     varied_beat_times = [beat_times[0]]
     segment_beats = [1, 2, 4]
-    candidate_segment_beats = []
     
     i = 0
     while True:
